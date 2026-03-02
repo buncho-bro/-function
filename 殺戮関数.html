@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>殺戮関数</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; background: #e8e6da; color: #333; 
+            font-family: 'Courier New', Courier, monospace; 
+            overflow: hidden; display: flex; justify-content: center; align-items: center; 
+            height: 100vh; width: 100vw; touch-action: manipulation;
+        }
+        .screen { display: none; width: 100%; height: 100%; position: relative; }
+        .active-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        canvas { 
+            background: #f4f2e8; border: 2px solid #888; 
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.1); 
+            max-width: 100vw; max-height: 100vh; 
+            object-fit: contain; 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+        
+        .menu-container {
+            width: 100%; max-width: 700px; height: 100%; max-height: 800px; 
+            background: #f4f2e8; border: 2px solid #888; box-shadow: 5px 5px 15px rgba(0,0,0,0.1); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            padding: 20px; overflow-y: auto;
+        }
+        
+        h1.title-logo { 
+            font-size: clamp(32px, 10vw, 64px); 
+            margin-bottom: 30px; color: #333; border-bottom: 4px dashed #888; 
+            padding-bottom: 10px; letter-spacing: 5px; text-align: center;
+        }
+        h2 { color: #333; border-bottom: 2px dashed #888; padding-bottom: 10px; width: 100%; text-align: center; font-size: clamp(20px, 6vw, 24px); margin-top: 0;}
+        
+        .btn {
+            display: block; width: 100%; max-width: 300px; padding: 15px; margin: 10px 0; 
+            background: #f0eee4; border: 2px solid #888; color: #333; cursor: pointer; 
+            text-align: center; font-size: 16px; font-weight: bold; transition: all 0.1s;
+            border-radius: 4px; appearance: none; 
+        }
+        @media (hover: hover) {
+            .btn:hover:not(:disabled) { background: #e0dec4; border-color: #333; }
+            .option-btn:hover:not(:disabled) { background: #e0dec4; border-color: #333; }
+            #remove-btn:hover { background: #c07070; }
+            #reroll-btn:hover:not(:disabled) { background: #357abd; border-color: #285e8e; }
+        }
+        .btn:active:not(:disabled), .option-btn:active:not(:disabled) { background: #d0ceb4; }
+        .btn:disabled, .option-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .back-btn { margin-top: 20px; background: #ddd; }
+
+        .list-container { width: 100%; flex-grow: 1; max-height: 50vh; overflow-y: auto; text-align: left; padding: 10px; border: 1px solid #ccc; background: #fffdf5; }
+        .list-item { border-bottom: 1px dashed #ccc; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
+        
+        .char-select-container { display: flex; gap: 20px; width: 100%; justify-content: center; flex-wrap: wrap; margin-bottom: 10px;}
+        .char-card {
+            flex: 1; min-width: 260px; padding: 20px; border-radius: 8px; text-align: left;
+            display: flex; flex-direction: column;
+        }
+        .char-card.eq { background: #fffdf5; border: 2px solid #ccc; }
+        .char-card.ineq { background: #f0f8ff; border: 2px solid #a0c8e0; }
+        .char-card h3 { text-align: center; margin-top: 0; font-size: 22px; }
+        .char-card p { font-size: 13px; line-height: 1.6; flex-grow: 1; margin: 10px 0 20px 0; }
+        .char-card .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; margin-bottom: 10px; width: 100%; text-align: center;}
+
+        #game-ui { 
+            position: absolute; top: 10px; left: 10px; pointer-events: none; 
+            width: calc(100% - 20px); max-width: 380px; z-index: 10;
+            background: rgba(244, 242, 232, 0.85); 
+            padding: 10px; border-radius: 8px; border: 1px solid rgba(136, 136, 136, 0.5);
+        }
+        
+        .bar-container { width: 100%; height: 8px; background: #ddd; margin-bottom: 5px; border: 1px solid #888; }
+        #hp-bar { height: 100%; background: #d66060; transition: width 0.2s; } 
+        #xp-bar { height: 100%; background: #60d6a0; transition: width 0.2s; } 
+        
+        #level-up-modal, #game-over-modal { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            background: #fcfaf2; padding: 20px; border: 3px solid #666; display: none; text-align: center; 
+            pointer-events: auto; width: 95%; max-width: 420px; max-height: 90vh; overflow-y: auto;
+            border-radius: 4px; box-shadow: 5px 5px 20px rgba(0,0,0,0.3); z-index: 20;
+        }
+        
+        .option-btn { display: block; width: 100%; padding: 12px; margin: 10px 0; background: #f0eee4; border: 2px solid #888; color: #333; cursor: pointer; text-align: left; transition: all 0.1s; border-radius: 4px;}
+        
+        .type-badge { display: inline-block; padding: 3px 6px; background: #90a0d0; color: #fff; font-size: 10px; margin-right: 8px; border-radius: 2px; font-weight: bold; vertical-align: middle; }
+        .type-badge.stat { background: #d0a060; }
+        .type-badge.target { background: #80c090; }
+        .type-badge.mod { background: #b090d0; }
+        .type-badge.target-mod { background: #e09040; box-shadow: 0 0 5px rgba(224, 144, 64, 0.5); }
+        .type-badge.rare { background: #d0a060; box-shadow: 0 0 5px rgba(208, 160, 96, 0.8); }
+        .type-badge.base { background: #50a0a0; }
+        
+        #reroll-btn { background: #4a90e2; border-color: #357abd; text-align: center; font-weight: bold; color: #fff; }
+        #reroll-btn:active:not(:disabled) { background: #285e8e; }
+        #reroll-btn:disabled { background: #bbb; border-color: #999; color: #fff; }
+        #remove-btn { background: #d08a8a; border-color: #a05050; text-align: center; font-weight: bold; color: #fff; }
+        #remove-btn:active { background: #a04040; }
+        
+        .global-xp-display { font-size: 16px; font-weight: bold; color: #8a6d50; margin-bottom: 10px; text-align: center;}
+    </style>
+</head>
+<body>
+
+    <div id="title-screen" class="screen active-screen">
+        <div class="menu-container">
+            <h1 class="title-logo">殺戮関数</h1>
+            <button class="btn" onclick="showScreen('char-select-screen')">ゲームを始める</button>
+            <button class="btn" onclick="showScreen('upgrade-screen'); updateUpgradeUI();">自分の強化</button>
+            <button class="btn" onclick="showScreen('encyclopedia-screen'); initEncyclopedia('eq');">関数の図鑑</button>
+        </div>
+    </div>
+
+    <div id="char-select-screen" class="screen">
+        <div class="menu-container" style="max-width: 800px;">
+            <h2>キャラクター選択</h2>
+            <div class="char-select-container">
+                <div class="char-card eq">
+                    <h3 style="color: #333;"><span style="font-size: 28px; vertical-align: middle;">＝</span> 等号キャラ</h3>
+                    <div class="badge" style="background: #e0e0e0; color: #333;">軌道描画・一撃必殺</div>
+                    <p style="color: #555;">数学の関数を用いて「線（軌道）」を描画し、触れた敵を切り裂くキャラクターです。<br><br>弾幕のように線を張り巡らせたり、極太のレーザーを放つなど、幾何学的な模様で敵をなぎ倒します。</p>
+                    <button class="btn" style="width: 100%; margin: 0;" onclick="startGame('eq')">出撃する</button>
+                </div>
+                <div class="char-card ineq">
+                    <h3 style="color: #285e8e;"><span style="font-size: 28px; vertical-align: middle;">＜</span> 不等号キャラ</h3>
+                    <div class="badge" style="background: #cce0ff; color: #285e8e;">領域展開・継続ダメージ</div>
+                    <p style="color: #446688;">不等式を用いて画面を塗りつぶし、指定した「面（領域）」に侵入した敵へ継続的にダメージを与えます。<br><br>敵の進路を塞ぐようにダメージゾーンを配置していく制圧型の戦術が得意です。</p>
+                    <button class="btn" style="width: 100%; margin: 0; background: #4a90e2; color: #fff; border-color: #357abd;" onclick="startGame('ineq')">出撃する</button>
+                </div>
+            </div>
+            <button class="btn back-btn" onclick="showScreen('title-screen')">タイトルへ戻る</button>
+        </div>
+    </div>
+
+    <div id="upgrade-screen" class="screen">
+        <div class="menu-container">
+            <h2>自分の強化</h2>
+            <div class="global-xp-display">所持XP: <span id="global-xp-val">0</span></div>
+            <div class="list-container" id="upgrade-list"></div>
+            <button class="btn back-btn" onclick="showScreen('title-screen')">タイトルへ戻る</button>
+        </div>
+    </div>
+
+    <div id="encyclopedia-screen" class="screen">
+        <div class="menu-container">
+            <h2>関数の図鑑</h2>
+            <div style="display:flex; gap:10px; margin-bottom:10px; width:100%;">
+                <button class="btn" style="margin:0; padding:8px;" onclick="initEncyclopedia('eq')">等号 [＝]</button>
+                <button class="btn" style="margin:0; padding:8px; background: #e0f0ff; border-color: #a0c8e0;" onclick="initEncyclopedia('ineq')">不等号 [＜]</button>
+            </div>
+            <div class="list-container" id="dict-list"></div>
+            <button class="btn back-btn" onclick="showScreen('title-screen')">タイトルへ戻る</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="game-ui">
+            <div style="font-size: 14px; font-weight: bold; color: #333;">
+                Lv: <span id="lv-val">1</span> | Time: <span id="time-val">0:00</span> | Type: <span id="type-val"></span>
+            </div>
+            <div class="bar-container"><div id="hp-bar" style="width: 100%;"></div></div>
+            <div class="bar-container"><div id="xp-bar" style="width: 0%;"></div></div>
+            <div id="stats-list" style="font-size: 11px; color: #8a6d50; margin-bottom: 5px; font-weight: bold;"></div>
+            <div id="formula-list" style="font-size: 11px; color: #444; line-height: 1.4; white-space: pre-wrap;"></div>
+        </div>
+
+        <div id="level-up-modal">
+            <h2 id="modal-title" style="margin-top:0;">LEVEL UP!</h2>
+            <p id="modal-desc" style="color:#666; font-size: 14px;">報酬を選択してください：</p>
+            <div id="options"></div>
+            <button id="reroll-btn" class="option-btn" style="display: none;"></button>
+            <button id="remove-btn" class="option-btn" style="display: none;">
+                ⚠️ 既存の要素を一つ削除する
+            </button>
+        </div>
+
+        <div id="game-over-modal">
+            <h2 id="modal-title-go" style="color:#d06060; border-bottom:none;">GAME OVER</h2>
+            <div id="result-stats" style="font-size: 14px; line-height: 2; margin-bottom: 15px;"></div>
+            <div style="font-size: 18px; font-weight: bold; color: #60d6a0; margin-bottom: 15px;">
+                獲得 XP: <span id="result-xp">0</span>
+            </div>
+            <button class="btn" style="width: 100%; margin: 0 auto;" onclick="returnToTitle()">タイトルへ戻る</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let animationId;
+        let lastFrameTime = 0;
+
+        let pointerCoords = { x: 400, y: 300 };
+        function updatePointer(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            pointerCoords.x = (clientX - rect.left) * scaleX;
+            pointerCoords.y = (clientY - rect.top) * scaleY;
+        }
+        window.addEventListener('mousemove', e => updatePointer(e.clientX, e.clientY));
+        window.addEventListener('touchmove', e => updatePointer(e.touches[0].clientX, e.touches[0].clientY), {passive: true});
+        window.addEventListener('touchstart', e => updatePointer(e.touches[0].clientX, e.touches[0].clientY), {passive: true});
+
+        let globalData = { xp: 0, upgrades: { hp: 0, atk: 0, spd: 0, reroll: 0 } };
+        function loadData() { 
+            try { 
+                const saved = localStorage.getItem('satsuriku-data'); 
+                if (saved) {
+                    let parsed = JSON.parse(saved);
+                    globalData.xp = parsed.xp || 0;
+                    if(parsed.upgrades) {
+                        globalData.upgrades.hp = parsed.upgrades.hp || 0;
+                        globalData.upgrades.atk = parsed.upgrades.atk || 0;
+                        globalData.upgrades.spd = parsed.upgrades.spd || 0;
+                        globalData.upgrades.reroll = parsed.upgrades.reroll || 0;
+                    }
+                } 
+            } catch(e) {} 
+        }
+        function saveData() { try { localStorage.setItem('satsuriku-data', JSON.stringify(globalData)); } catch(e) {} }
+        loadData();
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active-screen'));
+            document.getElementById(screenId).classList.add('active-screen');
+        }
+
+        let gameState = {};
+
+        const ddxHtml = "<span style='display:inline-flex; flex-direction:column; vertical-align:middle; text-align:center; font-size:10px; line-height:1; margin-right:3px;'><span style='padding:0 2px;'>d</span><span style='border-top:1px solid currentColor; padding:0 2px;'>dx</span></span>";
+        const intHtml = "<span style='font-size:14px; font-weight:bold;'>∫</span>";
+
+        const upgradesEq = [
+            { type: "variable", weight: 10, name: "変数: 最寄りの敵 (CLO)", shortName: "CLO", code: "CLO", desc: "グラフの基準を最寄りの敵にする" },
+            { type: "variable", weight: 10, name: "変数: ランダム (RAN)", shortName: "RAN", code: "RAN", desc: "グラフの基準をランダムな敵にする" },
+            { type: "variable", weight: 10, name: "変数: 敵の重心 (AVG)", shortName: "AVG", code: "AVG", desc: "画面内の敵の密集地を基準にする" },
+            { type: "variable", weight: 10, name: "変数: ポインタ (PTR)", shortName: "PTR", code: "PTR", desc: "タップやカーソルの位置を基準にする" },
+            
+            { type: "target_mod", weight: 10, name: "射出 (Launch)", shortName: "Launch", code: "LAUNCH", desc: "【動的基準点】攻撃がプレイヤーから基準点へ向かって飛んでいく" },
+
+            { type: "formula", weight: 10, name: "円の方程式 (Circle)", shortName: "Circle", code: "CIRCLE", desc: "軌道のベースを半径80の円形にする" },
+            { type: "formula", weight: 10, name: "バラ曲線 (r=cos kθ)", shortName: "r=cos(kθ)", code: "ROSE", desc: "花びら状のグラフ。重ねると花びらが増加" },
+            { type: "formula", weight: 10, name: "Sine Wave (sin)", shortName: "sin(x)", code: "Math.sin(x/20)*30", desc: "横に波打つ軌道を追加" },
+            { type: "formula", weight: 8,  name: "Abs Sine Wave |sin|", shortName: "|sin(x)|", code: "Math.abs(Math.sin(x/30))*50", desc: "地面を跳ねるような軌道を追加" },
+            { type: "formula", weight: 8,  name: "Exponential (exp)", shortName: "exp(x)", code: "Math.exp(x/100)*10", desc: "片側が急激に跳ね上がる壁のような軌道" },
+            { type: "formula", weight: 8,  name: "Logarithm (log)", shortName: "log(x)", code: "Math.log(Math.abs(x/10)+1)*30", desc: "中心付近で鋭く突き刺さる軌道" },
+            { type: "formula", weight: 8,  name: "Sigmoid (1/1+e^-x)", shortName: "Sigmoid", code: "(1/(1+Math.exp(-x/40)))*100 - 50", desc: "階段のような段差のある軌道" },
+            { type: "formula", weight: 10, name: "Parabola (x²)", shortName: "x²", code: "(x*x)/200", desc: "放物線の軌道を追加" },
+            { type: "formula", weight: 10, name: "Random Noise", shortName: "Noise", code: "(RAN_x * 0.1)", desc: "ランダムな敵の座標を干渉させる" },
+            { type: "formula", weight: 2,  name: "Tangent Wave (tan)", shortName: "tan(x)", code: "TAN", desc: "【レア】横縞のように激しく振動する軌道" },
+            
+            { type: "modifier", weight: 10, name: `${ddxHtml} (反転)`, shortName: "d/dx", code: "INVERT", desc: "関数の描画を上下に反転させる" },
+            { type: "modifier", weight: 10, name: `${intHtml} (積分)`, shortName: "∫", code: "INT", desc: "攻撃力と太さが激増するが、描画間隔が長くなる" },
+            { type: "modifier", weight: 8,  name: "lim (極限)", shortName: "lim", code: "LIM", desc: "関数が画面端を突き抜け、反対側からループする" },
+            { type: "modifier", weight: 8,  name: "i (虚数)", shortName: "i", code: "IMG", desc: "影の軌道を追加。触れた敵は次に受けるダメージが2倍" },
+            { type: "modifier", weight: 6,  name: "Σ (総和)", shortName: "Σ", code: "SIGMA", desc: "軌道をY軸に複製し、3重の弾幕にする" },
+            
+            { type: "stat", weight: 10, name: "攻撃力UP (Atk+)", shortName: "Atk+", desc: "グラフが与えるダメージ +0.2", action: () => gameState.player.damage += 0.2 },
+            { type: "stat", weight: 10, name: "描画速度UP (Spd+)", shortName: "Spd+", desc: "関数の描画スピードが上がる", action: () => gameState.player.attackInterval = Math.max(3, gameState.player.attackInterval - 2) },
+            { type: "stat", weight: 10, name: "太さUP (Width+)", shortName: "Width+", desc: "グラフの線と当たり判定が太くなる", action: () => gameState.player.lineWidth += 2 }
+        ];
+
+        const upgradesIneq = [
+            { type: "variable", weight: 10, name: "変数: 最寄りの敵 (CLO)", shortName: "CLO", code: "CLO", desc: "領域の基準を最寄りの敵にする" },
+            { type: "variable", weight: 10, name: "変数: ランダム (RAN)", shortName: "RAN", code: "RAN", desc: "領域の基準をランダムな敵にする" },
+            { type: "variable", weight: 10, name: "変数: 敵の重心 (AVG)", shortName: "AVG", code: "AVG", desc: "画面内の敵の密集地を基準にする" },
+            { type: "variable", weight: 10, name: "変数: ポインタ (PTR)", shortName: "PTR", code: "PTR", desc: "タップやカーソルの位置を基準にする" },
+            
+            { type: "target_mod", weight: 10, name: "射出 (Launch)", shortName: "Launch", code: "LAUNCH", desc: "【動的基準点】領域がプレイヤーから基準点へ向かって飛んでいく" },
+
+            { type: "base", weight: 10, name: "下部領域 (y < f(x))", shortName: "y<f(x)", code: "BASE_LESS", desc: "基準より【下】を塗りつぶす領域にする" },
+            { type: "base", weight: 10, name: "円形領域 (x²+y² < R²)", shortName: "Circle Area", code: "BASE_CIRCLE", desc: "基準の【周囲】を塗りつぶす領域にする" },
+            
+            { type: "formula", weight: 10, name: "Sine 波面 (sin)", shortName: "sin(x)", code: "SIN_AREA", desc: "領域の境界を波打たせる" },
+            { type: "formula", weight: 10, name: "Parabola 谷 (x²)", shortName: "x²", code: "PARA_AREA", desc: "領域の境界をU字型にくぼませる" },
+            { type: "formula", weight: 10, name: "Noise 浸食", shortName: "Noise", code: "NOISE_AREA", desc: "領域の境界をランダムに荒らす" },
+            { type: "formula", weight: 8,  name: "Step 階段 (floor)", shortName: "floor(x)", code: "STEP_AREA", desc: "領域の境界を階段状にする" },
+            { type: "formula", weight: 2,  name: "Tangent Wave (tan)", shortName: "tan(x)", code: "TAN_AREA", desc: "【レア】横縞のように激しく振動する境界" },
+            
+            { type: "modifier", weight: 10, name: "NOT (反転)", shortName: "NOT", code: "INVERT_INEQ", desc: "不等号を反転させる (上⇔下、内⇔外)" },
+            { type: "modifier", weight: 10, name: "帯域化 (Band)", shortName: "Band", code: "BAND_INEQ", desc: "領域を境界線付近の『帯』に限定し威力を1.5倍にする" },
+            { type: "modifier", weight: 8, name: "持続化 (Persist)", shortName: "Persist", code: "PERSIST", desc: "領域が画面に長く残り続け、継続ダメージを与える" },
+            
+            { type: "stat", weight: 10, name: "攻撃力UP (Atk+)", shortName: "Atk+", desc: "領域が与える継続ダメージ +0.1", action: () => gameState.player.damage += 0.1 },
+            { type: "stat", weight: 10, name: "展開速度UP (Spd+)", shortName: "Spd+", desc: "領域の発生スピードが上がる", action: () => gameState.player.attackInterval = Math.max(5, gameState.player.attackInterval - 2) },
+            { type: "stat", weight: 10, name: "持続時間UP (Dur+)", shortName: "Dur+", desc: "領域が画面に残る時間が延びる", action: () => gameState.player.durationBonus = (gameState.player.durationBonus || 0) + 15 }
+        ];
+
+        function initEncyclopedia(type) {
+            const list = document.getElementById('dict-list');
+            list.innerHTML = '';
+            const pool = type === 'eq' ? upgradesEq : upgradesIneq;
+            
+            pool.forEach(u => {
+                if (u.type === 'stat') return; 
+                let badge = '';
+                if (u.code === 'TAN' || u.code === 'TAN_AREA') badge = '<span class="type-badge rare">RARE</span>';
+                else if (u.type === 'variable') badge = '<span class="type-badge target">TARGET</span>';
+                else if (u.type === 'target_mod') badge = '<span class="type-badge target-mod">TARGET MOD</span>';
+                else if (u.type === 'modifier') badge = '<span class="type-badge mod">MODIFIER</span>';
+                else if (u.type === 'base') badge = '<span class="type-badge base">BASE AREA</span>';
+                else badge = '<span class="type-badge">FORMULA</span>';
+
+                list.innerHTML += `
+                    <div class="list-item" style="flex-direction: column; align-items: flex-start;">
+                        <div style="font-size:14px; display:flex; align-items:center;">${badge} <b>${u.name}</b></div>
+                        <div style="font-size: 12px; color: #666; margin-top: 5px;">${u.desc}</div>
+                    </div>`;
+            });
+        }
+
+        const persistentUpgrades = [
+            { id: 'hp', name: '初期最大HP増加 (+5)', baseCost: 10, effect: (lv) => `HP +${lv * 5}` },
+            { id: 'atk', name: '初期攻撃力増加 (+0.1)', baseCost: 15, effect: (lv) => `ATK +${(lv * 0.1).toFixed(1)}` },
+            { id: 'spd', name: '初期描画速度UP (-1F)', baseCost: 20, effect: (lv) => `間隔 -${lv}F` },
+            { id: 'reroll', name: 'リロール回数増加 (+1)', baseCost: 20, effect: (lv) => `初期 ${3 + lv}回` }
+        ];
+
+        function updateUpgradeUI() {
+            document.getElementById('global-xp-val').innerText = globalData.xp;
+            const list = document.getElementById('upgrade-list');
+            list.innerHTML = '';
+
+            persistentUpgrades.forEach(u => {
+                const currentLv = globalData.upgrades[u.id] || 0;
+                const cost = u.baseCost * (currentLv + 1);
+                const canAfford = globalData.xp >= cost;
+                list.innerHTML += `
+                    <div class="list-item">
+                        <div style="font-size:14px;">
+                            <b>${u.name}</b> (Lv.${currentLv})<br>
+                            <small style="color:#666">現在: ${u.effect(currentLv)}</small>
+                        </div>
+                        <button class="btn" style="width: auto; padding: 8px 15px; margin: 0; font-size:12px;" 
+                            ${canAfford ? '' : 'disabled'} onclick="buyUpgrade('${u.id}', ${cost})">
+                            強化 (${cost} XP)
+                        </button>
+                    </div>`;
+            });
+        }
+
+        function buyUpgrade(id, cost) {
+            if (globalData.xp >= cost) {
+                globalData.xp -= cost; 
+                globalData.upgrades[id] = (globalData.upgrades[id] || 0) + 1;
+                saveData(); updateUpgradeUI();
+            }
+        }
+
+        function startGame(charType) {
+            document.getElementById('game-over-modal').style.display = 'none';
+            document.getElementById('level-up-modal').style.display = 'none';
+            showScreen('game-screen');
+
+            const initialMaxHp = 35 + ((globalData.upgrades.hp || 0) * 5);
+            const initialAtk = 1.0 + ((globalData.upgrades.atk || 0) * 0.1);
+            const initialSpd = Math.max(3, 12 - (globalData.upgrades.spd || 0));
+            const initialRerolls = 3 + (globalData.upgrades.reroll || 0);
+
+            let initialFormulas = [];
+            let typeName = "";
+            if (charType === 'eq') {
+                initialFormulas = [ { id: 1, name: "スロット1", components: [ { name: "Circle", shortName: "Circle", code: "CIRCLE" } ], variables: [] } ];
+                typeName = "＝ (等号)";
+            } else {
+                initialFormulas = [ { id: 1, name: "領域1", components: [], variables: [] } ];
+                typeName = "＜ (不等号)";
+            }
+            document.getElementById('type-val').innerText = typeName;
+
+            gameState = {
+                charType: charType, 
+                player: { hp: initialMaxHp, maxHp: initialMaxHp, x: 400, y: 300, size: 26, lv: 1, xp: 0, nextXp: 5, damage: initialAtk, attackInterval: initialSpd, lineWidth: 3, invincible: 0, durationBonus: 0 },
+                enemies: [], effects: [], ineqEffects: [], enemyEffects: [],
+                formulas: initialFormulas,
+                frameCount: 0, spawnRate: 60, isPaused: false, isGameOver: false,
+                rerollsLeft: initialRerolls, currentUpgrades: null
+            };
+
+            if (animationId) cancelAnimationFrame(animationId);
+            lastFrameTime = performance.now();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function returnToTitle() {
+            if (animationId) cancelAnimationFrame(animationId);
+            showScreen('title-screen');
+        }
+
+        function evaluateBossFormula(t, formulaTypes, T, tRange) {
+            let curX = t, curY = 0;
+            if (formulaTypes.includes('ROSE')) {
+                let angle = (t + tRange) * (Math.PI * 2 / (tRange*2));
+                let r = Math.cos(4 * angle) * 150; 
+                curX = r * Math.cos(angle); curY = r * Math.sin(angle);
+            } else if (formulaTypes.includes('CIRCLE')) {
+                let angle = (t + tRange) * (Math.PI * 2 / (tRange*2));
+                curX = Math.cos(angle) * 150; curY = Math.sin(angle) * 150;
+            }
+            if (formulaTypes.includes('SIN')) curY += Math.sin(curX/20)*40;
+            if (formulaTypes.includes('ABS_SIN')) curY += Math.abs(Math.sin(curX/30))*50;
+            if (formulaTypes.includes('EXP')) curY += Math.exp(curX/100)*10;
+            if (formulaTypes.includes('LOG')) curY += Math.log(Math.abs(curX/10)+1)*40;
+            if (formulaTypes.includes('SIGMA_FUNC')) curY += (1/(1+Math.exp(-curX/40)))*100 - 50;
+            if (formulaTypes.includes('PARABOLA')) curY += (curX*curX)/200;
+            if (formulaTypes.includes('TAN')) {
+                let tanVal = Math.tan(t / 20) * 40;
+                if (tanVal > 800) tanVal = 800; if (tanVal < -800) tanVal = -800; curX += tanVal;
+            }
+            return { x: curX, y: curY };
+        }
+
+        class Enemy {
+            constructor(typeIdx) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 550;
+                this.x = gameState.player.x + Math.cos(angle) * dist;
+                this.y = gameState.player.y + Math.sin(angle) * dist;
+                this.hitFlash = 0; this.fragile = 0; this.ineqCooldown = {};
+                this.isBoss = false;
+                this.typeIdx = typeIdx; this.n = typeIdx + 3; 
+                this.maxHp = 1 + this.typeIdx * 2; this.hp = this.maxHp;
+                this.speed = 1.0 + this.typeIdx * 0.1 + (gameState.player.lv * 0.05);
+                this.size = 12 + this.typeIdx * 1.5; this.xp = 1 + this.typeIdx; 
+                const lightness = Math.max(30, 70 - this.typeIdx * 5); 
+                const saturation = Math.min(80, 40 + this.typeIdx * 5); 
+                this.color = `hsl(0, ${saturation}%, ${lightness}%)`;
+            }
+            update() {
+                const d = Math.hypot(gameState.player.x - this.x, gameState.player.y - this.y);
+                if (d > 1) { this.x += ((gameState.player.x - this.x)/d) * this.speed; this.y += ((gameState.player.y - this.y)/d) * this.speed; }
+                for (let key in this.ineqCooldown) { if(this.ineqCooldown[key] > 0) this.ineqCooldown[key]--; }
+            }
+            draw() {
+                ctx.fillStyle = this.hitFlash > 0 ? "#ffffff" : this.color;
+                ctx.beginPath();
+                const offset = (this.n % 2 === 0) ? Math.PI / this.n : 0;
+                for (let i = 0; i < this.n; i++) {
+                    const theta = -Math.PI / 2 + offset + (Math.PI * 2 * i) / this.n;
+                    const px = this.x + Math.cos(theta) * this.size;
+                    const py = this.y + Math.sin(theta) * this.size;
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.strokeStyle = "#804040"; ctx.lineWidth = 2; ctx.stroke(); ctx.fill();
+
+                if (this.fragile > 0) {
+                    ctx.save(); ctx.strokeStyle = "rgba(180, 100, 200, 0.8)"; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(this.x, this.y, this.size + 4, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+                    this.fragile--;
+                }
+                if (this.maxHp > 1) {
+                    ctx.fillStyle = "#804040"; ctx.fillRect(this.x - 12, this.y - this.size - 10, 24, 4);
+                    ctx.fillStyle = "#d66060"; ctx.fillRect(this.x - 12, this.y - this.size - 10, 24 * (Math.max(0, this.hp) / this.maxHp), 4);
+                }
+                if (this.hitFlash > 0) this.hitFlash--;
+            }
+        }
+
+        class BossEnemy extends Enemy {
+            constructor(bossType, lv) {
+                super(0); 
+                this.isBoss = true; this.bossType = bossType; 
+                this.n = bossType === 'mid' ? 8 : 12; 
+                this.size = bossType === 'mid' ? 35 : 50;
+                this.color = bossType === 'mid' ? '#c04080' : '#802020'; 
+                this.maxHp = bossType === 'mid' ? 1000 + lv * 10 : 2500 + lv * 20;
+                this.hp = this.maxHp;
+                this.speed = 1.0 + (lv * 0.02); 
+                this.xp = bossType === 'mid' ? 300 : 0; 
+                this.formulas = bossType === 'mid' ? ['ROSE', 'SIN'] : ['CIRCLE', 'PARABOLA'];
+                this.timer = 0; this.state = 'APPROACH'; this.attackDelay = 0;
+            }
+            update() {
+                for (let key in this.ineqCooldown) { if(this.ineqCooldown[key] > 0) this.ineqCooldown[key]--; }
+                
+                if (this.state === 'APPROACH') {
+                    const d = Math.hypot(gameState.player.x - this.x, gameState.player.y - this.y);
+                    this.x += ((gameState.player.x - this.x)/d) * this.speed; 
+                    this.y += ((gameState.player.y - this.y)/d) * this.speed; 
+                    
+                    if (d < 150) {
+                        this.state = 'ATTACK';
+                        this.attackDelay = 30; 
+                    }
+                } else if (this.state === 'ATTACK') {
+                    this.attackDelay--;
+                    if (this.attackDelay <= 0) {
+                        this.bossAttack();
+                        this.teleportAway();
+                        this.state = 'APPROACH';
+                    }
+                }
+
+                if (this.bossType === 'last') {
+                    this.timer++;
+                    if (this.timer >= 300) { 
+                        this.timer = 0;
+                        const pool = ['CIRCLE', 'ROSE', 'SIN', 'ABS_SIN', 'EXP', 'LOG', 'SIGMA_FUNC', 'PARABOLA', 'TAN'];
+                        this.formulas = [];
+                        const bases = ['CIRCLE', 'ROSE', 'LINE'];
+                        const base = bases[Math.floor(Math.random() * bases.length)];
+                        if (base !== 'LINE') this.formulas.push(base);
+                        let addCount = 1 + Math.floor(Math.random() * 2);
+                        for(let i=0; i<addCount; i++){
+                            let add = pool[Math.floor(Math.random() * pool.length)];
+                            if(!this.formulas.includes(add)) this.formulas.push(add);
+                        }
+                    }
+                }
+            }
+            teleportAway() {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 600; 
+                this.x = gameState.player.x + Math.cos(angle) * dist;
+                this.y = gameState.player.y + Math.sin(angle) * dist;
+            }
+            bossAttack() {
+                const tRange = 400; const pts = [];
+                for (let t = -tRange; t <= tRange; t += 4) {
+                    let p = evaluateBossFormula(t, this.formulas, gameState.frameCount, tRange);
+                    pts.push({ x: p.x + this.x, y: -p.y + this.y });
+                }
+                gameState.enemyEffects.push({ points: pts, life: 30, lineWidth: 4, hasHit: false });
+            }
+            draw() {
+                if (this.state === 'ATTACK') {
+                    ctx.save(); ctx.beginPath(); ctx.arc(this.x, this.y, this.size * 1.5, 0, Math.PI * 2);
+                    ctx.fillStyle = "rgba(255, 100, 100, 0.3)"; ctx.fill(); ctx.restore();
+                }
+                super.draw();
+                ctx.fillStyle = "#804040"; ctx.fillRect(this.x - 40, this.y - this.size - 15, 80, 8);
+                ctx.fillStyle = "#ff3333"; ctx.fillRect(this.x - 40, this.y - this.size - 15, 80 * (Math.max(0, this.hp) / this.maxHp), 8);
+            }
+        }
+
+        function getTarget(type) {
+            if (gameState.enemies.length === 0) return null;
+            if (type === 'CLO') {
+                return gameState.enemies.reduce((prev, curr) => {
+                    const d1 = Math.hypot(prev.x - gameState.player.x, prev.y - gameState.player.y);
+                    const d2 = Math.hypot(curr.x - gameState.player.x, curr.y - gameState.player.y);
+                    return d1 < d2 ? prev : curr;
+                });
+            }
+            if (type === 'RAN') return gameState.enemies[Math.floor(Math.random() * gameState.enemies.length)];
+            return null;
+        }
+
+        function attack() {
+            if (gameState.charType === 'eq') attackEq();
+            else attackIneq();
+        }
+
+        function attackEq() {
+            const T = gameState.frameCount;
+            const ranEntity = getTarget('RAN') || gameState.player;
+            const relRan = { x: ranEntity.x - gameState.player.x, y: -(ranEntity.y - gameState.player.y) };
+            
+            gameState.formulas.forEach((formula) => {
+                let intCount = formula.components.filter(c => c.code === 'INT').length;
+                let limCount = formula.components.filter(c => c.code === 'LIM').length;
+                let imgCount = formula.components.filter(c => c.code === 'IMG').length;
+                let sigmaCount = formula.components.filter(c => c.code === 'SIGMA').length;
+                let hasVector = formula.components.some(c => c.code === 'LAUNCH');
+                
+                let slotInterval = gameState.player.attackInterval + (intCount * 15);
+                if (T % slotInterval !== 0) return; 
+
+                // 【バグ修正】PTRの座標を正しく取得
+                let targetPoint = null;
+                if (formula.variables.length > 0) {
+                    let v = formula.variables[0]; 
+                    if (v.code === 'PTR') targetPoint = { x: pointerCoords.x, y: pointerCoords.y };
+                    else if (v.code === 'AVG') {
+                        if (gameState.enemies.length > 0) {
+                            let sx = 0, sy = 0; gameState.enemies.forEach(e => { sx+=e.x; sy+=e.y; });
+                            targetPoint = { x: sx/gameState.enemies.length, y: sy/gameState.enemies.length };
+                        }
+                    } else targetPoint = getTarget(v.code);
+                }
+                
+                let startOrigin = { x: gameState.player.x, y: gameState.player.y };
+                let endOrigin = targetPoint ? { x: targetPoint.x, y: targetPoint.y } : startOrigin;
+                
+                if (!hasVector) { startOrigin = endOrigin; }
+
+                let isCircle = formula.components.some(c => c.code === 'CIRCLE');
+                let roseCount = formula.components.filter(c => c.code === 'ROSE').length;
+                let invertCount = formula.components.filter(c => c.code === 'INVERT').length;
+                let tanCount = formula.components.filter(c => c.code === 'TAN').length;
+                let roseK = 2 + (roseCount * 2); 
+
+                let tRange = 400 + (limCount * 400); 
+                let rawPoints = []; 
+
+                for (let t = -tRange; t <= tRange; t += 4) {
+                    let curX = t, curY = 0;
+                    if (roseCount > 0) {
+                        let angle = (t + tRange) * (Math.PI * 2 / 800); 
+                        let r = Math.cos(roseK * angle) * 100;
+                        curX = r * Math.cos(angle); curY = r * Math.sin(angle);
+                    } else if (isCircle) {
+                        let angle = (t + tRange) * (Math.PI * 2 / 800);
+                        curX = Math.cos(angle) * 80; curY = Math.sin(angle) * 80;
+                    }
+
+                    for (let comp of formula.components) {
+                        if (['CIRCLE', 'ROSE', 'INVERT', 'TAN', 'INT', 'LIM', 'IMG', 'SIGMA', 'LAUNCH'].includes(comp.code)) continue;
+                        let extra = 0;
+                        try { extra = new Function('x', 'T', 'RAN_x', 'RAN_y', `return ${comp.code}`)(curX, T, relRan.x, relRan.y); } catch(e) {}
+                        curY += extra;
+                    }
+                    if (tanCount > 0) {
+                        let tanVal = Math.tan(t / 20) * (40 * tanCount);
+                        if (tanVal > 800) tanVal = 800; if (tanVal < -800) tanVal = -800; curX += tanVal;
+                    }
+                    if (invertCount % 2 === 1) curY = -curY;
+                    rawPoints.push({ lx: curX, ly: -curY });
+                }
+
+                let pointSets = [{ pts: rawPoints, isShadow: false }];
+                for(let s = 1; s <= sigmaCount; s++) {
+                    pointSets.push({ pts: rawPoints.map(p => ({lx: p.lx, ly: p.ly - 30 * s})), isShadow: false });
+                    pointSets.push({ pts: rawPoints.map(p => ({lx: p.lx, ly: p.ly + 30 * s})), isShadow: false });
+                }
+                if (imgCount > 0) {
+                    let shadowSets = [];
+                    pointSets.forEach(set => { shadowSets.push({ pts: set.pts.map(p => ({lx: p.lx + 20, ly: p.ly + 20})), isShadow: true }); });
+                    pointSets = pointSets.concat(shadowSets);
+                }
+
+                let currentLineWidth = gameState.player.lineWidth + (intCount * 5); 
+                let currentDamage = gameState.player.damage * (1 + intCount * 0.5); 
+                let maxLife = 12 + intCount * 4;
+
+                pointSets.forEach(set => {
+                    gameState.effects.push({ 
+                        localPoints: set.pts, life: maxLife, maxLife: maxLife, 
+                        isShadow: set.isShadow, lineWidth: currentLineWidth, hasLim: limCount > 0,
+                        hasVector: hasVector, startOrigin: startOrigin, endOrigin: endOrigin,
+                        damage: currentDamage, hitEnemies: new Set() 
+                    });
+                });
+            });
+        }
+
+        function evaluateIneqFormula(x, components, T, relRan) {
+            let y = 0;
+            for (let comp of components) {
+                if (['BASE_LESS', 'BASE_CIRCLE', 'INVERT_INEQ', 'BAND_INEQ', 'PERSIST', 'LAUNCH'].includes(comp.code)) continue;
+                // 【バグ修正】波が動くように T/10 を追加
+                if (comp.code === 'SIN_AREA') y += Math.sin(x/20 + T/10)*30;
+                else if (comp.code === 'PARA_AREA') y += (x*x)/200;
+                // 【バグ修正】時間で変化する疑似乱数に変更
+                else if (comp.code === 'NOISE_AREA') {
+                    let noise = Math.sin(x * 12.9898 + T * 0.1) * 43758.5453;
+                    y += (noise - Math.floor(noise) - 0.5) * 50;
+                }
+                else if (comp.code === 'STEP_AREA') y += Math.floor((x + T*2)/40)*40;
+                else if (comp.code === 'TAN_AREA') {
+                    let tanVal = Math.tan(x / 20 + T/10) * 40;
+                    if (tanVal > 800) tanVal = 800; if (tanVal < -800) tanVal = -800;
+                    y += tanVal;
+                }
+                else {
+                    try { y += new Function('x', 'T', 'RAN_x', 'RAN_y', `return ${comp.code}`)(x, T, relRan.x, relRan.y); } catch(e) {}
+                }
+            }
+            return y;
+        }
+
+        function attackIneq() {
+            const T = gameState.frameCount;
+            const ranEntity = getTarget('RAN') || gameState.player;
+            const relRan = { x: ranEntity.x - gameState.player.x, y: -(ranEntity.y - gameState.player.y) };
+
+            gameState.formulas.forEach((formula) => {
+                let slotInterval = gameState.player.attackInterval;
+                if (T % slotInterval !== 0) return; 
+
+                // 【バグ修正】PTRの座標を正しく取得
+                let targetPoint = null;
+                if (formula.variables.length > 0) {
+                    let v = formula.variables[0];
+                    if (v.code === 'PTR') targetPoint = { x: pointerCoords.x, y: pointerCoords.y };
+                    else if (v.code === 'AVG') {
+                        if (gameState.enemies.length > 0) {
+                            let sx = 0, sy = 0; gameState.enemies.forEach(e => { sx+=e.x; sy+=e.y; });
+                            targetPoint = { x: sx/gameState.enemies.length, y: sy/gameState.enemies.length };
+                        }
+                    } else targetPoint = getTarget(v.code);
+                }
+                
+                let hasVector = formula.components.some(c => c.code === 'LAUNCH');
+                let startOrigin = { x: gameState.player.x, y: gameState.player.y };
+                let endOrigin = targetPoint ? { x: targetPoint.x, y: targetPoint.y } : startOrigin;
+                if (!hasVector) { startOrigin = endOrigin; }
+
+                let baseType = 'GREATER';
+                if (formula.components.some(c => c.code === 'BASE_LESS')) baseType = 'LESS';
+                if (formula.components.some(c => c.code === 'BASE_CIRCLE')) baseType = 'CIRCLE';
+
+                let isBand = formula.components.some(c => c.code === 'BAND_INEQ');
+                let invertCount = formula.components.filter(c => c.code === 'INVERT_INEQ').length;
+                let isInverted = invertCount % 2 !== 0;
+                let persistCount = formula.components.filter(c => c.code === 'PERSIST').length;
+
+                let localPts = [];
+                let funcValues = [];
+                
+                if (baseType === 'CIRCLE') {
+                    // 【バグ修正】円周を細かく分割（t+=0.05）し、関数へ渡す x のスケールを拡大（t*200）
+                    for(let t = 0; t <= Math.PI*2 + 0.05; t += 0.05) {
+                        let f_val = evaluateIneqFormula(t*200, formula.components, T, relRan);
+                        let r = Math.max(0, 150 + f_val);
+                        localPts.push({lx: r * Math.cos(t), ly: -r * Math.sin(t)});
+                        funcValues.push({t: t, val: f_val});
+                    }
+                } else {
+                    for(let x = -400; x <= 400; x += 10) {
+                        let f_val = evaluateIneqFormula(x, formula.components, T, relRan);
+                        localPts.push({lx: x, ly: -f_val});
+                        funcValues.push({x: x, val: f_val});
+                    }
+                }
+
+                let currentDamage = gameState.player.damage * 0.4 * (isBand ? 1.5 : 1.0);
+                let life = 10 + persistCount * 45 + (gameState.player.durationBonus || 0);
+
+                gameState.ineqEffects.push({
+                    id: Math.random(),
+                    baseType, localPts, funcValues, 
+                    startOrigin, endOrigin, hasVector,
+                    isBand, isInverted,
+                    life: life, maxLife: life, damage: currentDamage
+                });
+            });
+        }
+
+        function gainXp(amt) {
+            gameState.player.xp += amt;
+            if (gameState.player.xp >= gameState.player.nextXp) levelUp();
+        }
+
+        function levelUp() {
+            gameState.player.lv++;
+            gameState.player.xp -= gameState.player.nextXp;
+            gameState.player.nextXp = Math.floor(gameState.player.nextXp * 1.5);
+            gameState.spawnRate = Math.max(10, 60 - Math.floor(gameState.player.lv * 1.5));
+            gameState.isPaused = true;
+            gameState.currentUpgrades = null;
+
+            if (gameState.player.lv % 10 === 0) {
+                const newSlotId = gameState.formulas.length + 1;
+                let nameStr = gameState.charType === 'eq' ? "スロット" : "領域";
+                gameState.formulas.push({ id: newSlotId, name: `${nameStr}${newSlotId}`, components: [], variables: [] });
+            }
+            showLevelUpModal();
+        }
+
+        function showLevelUpModal() {
+            const modal = document.getElementById('level-up-modal');
+            const optionsDiv = document.getElementById('options');
+            const removeBtn = document.getElementById('remove-btn');
+            const rerollBtn = document.getElementById('reroll-btn');
+            
+            optionsDiv.innerHTML = '';
+            modal.style.display = 'block';
+            document.getElementById('modal-title').innerText = "LEVEL UP!";
+            document.getElementById('modal-desc').innerText = "報酬を選択してください：";
+
+            const poolSource = gameState.charType === 'eq' ? upgradesEq : upgradesIneq;
+
+            if (!gameState.currentUpgrades) {
+                let shuffled = [];
+                let pool = [...poolSource];
+                for (let i = 0; i < 3; i++) {
+                    if (pool.length === 0) break;
+                    let totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+                    let r = Math.random() * totalWeight;
+                    for (let j = 0; j < pool.length; j++) {
+                        r -= pool[j].weight;
+                        if (r <= 0) { shuffled.push(pool[j]); pool.splice(j, 1); break; }
+                    }
+                }
+                gameState.currentUpgrades = shuffled;
+            }
+
+            gameState.currentUpgrades.forEach(upg => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                let badgeClass = 'type-badge'; let badgeText = 'FORMULA';
+                if (upg.code === 'TAN' || upg.code === 'TAN_AREA') { badgeClass += ' rare'; badgeText = 'RARE'; }
+                else if (upg.type === 'stat') { badgeClass += ' stat'; badgeText = 'STATUS'; }
+                else if (upg.type === 'variable') { badgeClass += ' target'; badgeText = 'TARGET'; }
+                else if (upg.type === 'target_mod') { badgeClass += ' target-mod'; badgeText = 'TARGET MOD'; }
+                else if (upg.type === 'modifier') { badgeClass += ' mod'; badgeText = 'MODIFIER'; }
+                else if (upg.type === 'base') { badgeClass += ' base'; badgeText = 'BASE AREA'; }
+
+                btn.innerHTML = `<span class="${badgeClass}">${badgeText}</span><div style="display:inline-block; vertical-align:middle;"><b style="color:#333; font-size:14px;">${upg.name}</b></div><br><small style="color:#666; display:block; margin-top:5px; font-size:11px;">${upg.desc}</small>`;
+                btn.onclick = () => {
+                    if (upg.type === 'stat') { upg.action(); closeModal(); } 
+                    else {
+                        if (gameState.formulas.length > 1) showSlotSelection(upg);
+                        else {
+                            if (upg.type === 'variable') gameState.formulas[0].variables = [{ name: upg.shortName, code: upg.code }];
+                            else gameState.formulas[0].components.push({ name: upg.shortName, code: upg.code });
+                            closeModal();
+                        }
+                    }
+                };
+                optionsDiv.appendChild(btn);
+            });
+
+            rerollBtn.style.display = 'block';
+            rerollBtn.innerText = `🔄 リロールする (残り${gameState.rerollsLeft}回)`;
+            rerollBtn.disabled = gameState.rerollsLeft <= 0;
+            rerollBtn.onclick = () => {
+                if (gameState.rerollsLeft > 0) {
+                    gameState.rerollsLeft--;
+                    gameState.currentUpgrades = null;
+                    showLevelUpModal();
+                }
+            };
+
+            const hasElements = gameState.formulas.some(f => f.components.length > 0 || f.variables.length > 0);
+            if (hasElements) {
+                removeBtn.style.display = 'block'; removeBtn.onclick = () => showRemoveSelection();
+            } else { removeBtn.style.display = 'none'; }
+        }
+
+        function showSlotSelection(upg) {
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+            const optionsDiv = document.getElementById('options');
+            document.getElementById('remove-btn').style.display = 'none';
+            document.getElementById('reroll-btn').style.display = 'none';
+            title.innerText = "スロット選択"; desc.innerText = `「${upg.shortName}」を追加するスロット：`;
+            optionsDiv.innerHTML = '';
+
+            gameState.formulas.forEach((slot) => {
+                const btn = document.createElement('button'); btn.className = 'option-btn';
+                const vars = slot.variables.map(v => v.name).join(' & ') || '自分';
+                const comps = slot.components.map(c => c.name).join(' + ') || 'なし';
+                btn.innerHTML = `<b style="color:#333; font-size:14px;">${slot.name}</b><br><small style="color:#666; font-size:11px;">[基準] ${vars} / [関数] ${comps}</small>`;
+                btn.onclick = () => {
+                    if (upg.type === 'variable') slot.variables = [{ name: upg.shortName, code: upg.code }];
+                    else slot.components.push({ name: upg.shortName, code: upg.code });
+                    closeModal();
+                };
+                optionsDiv.appendChild(btn);
+            });
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'option-btn'; cancelBtn.style.background = '#ddd'; cancelBtn.style.color = '#333';
+            cancelBtn.innerText = "キャンセルして戻る";
+            cancelBtn.onclick = () => showLevelUpModal();
+            optionsDiv.appendChild(cancelBtn);
+        }
+
+        function showRemoveSelection() {
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+            const optionsDiv = document.getElementById('options');
+            document.getElementById('remove-btn').style.display = 'none';
+            document.getElementById('reroll-btn').style.display = 'none';
+            title.innerText = "要素の削除"; desc.innerText = "削除する要素を選んでください";
+            optionsDiv.innerHTML = '';
+
+            gameState.formulas.forEach((slot) => {
+                slot.variables.forEach((v, vIdx) => {
+                    const btn = document.createElement('button'); btn.className = 'option-btn';
+                    btn.innerHTML = `<span class="type-badge target">TARGET</span><b style="color:#a05050">${v.name}</b><br><small style="color:#666;">(${slot.name} の基準点)</small>`;
+                    btn.onclick = () => { slot.variables.splice(vIdx, 1); closeModal(); }; optionsDiv.appendChild(btn);
+                });
+                slot.components.forEach((comp, cIdx) => {
+                    const btn = document.createElement('button'); btn.className = 'option-btn';
+                    btn.innerHTML = `<span class="type-badge">FORMULA</span><b style="color:#a05050">${comp.name}</b><br><small style="color:#666;">(${slot.name} の要素)</small>`;
+                    btn.onclick = () => { slot.components.splice(cIdx, 1); closeModal(); }; optionsDiv.appendChild(btn);
+                });
+            });
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'option-btn'; cancelBtn.style.background = '#ddd'; cancelBtn.style.color = '#333';
+            cancelBtn.innerText = "キャンセルして戻る";
+            cancelBtn.onclick = () => showLevelUpModal();
+            optionsDiv.appendChild(cancelBtn);
+        }
+
+        function closeModal() {
+            document.getElementById('level-up-modal').style.display = 'none';
+            gameState.isPaused = false;
+            lastFrameTime = performance.now(); 
+        }
+
+        function damagePlayer(amt) {
+            if (gameState.player.invincible > 0) return;
+            gameState.player.hp -= amt;
+            gameState.player.invincible = 45; 
+        }
+
+        function triggerGameOver() {
+            gameState.isGameOver = true;
+            const timeSec = Math.floor(gameState.frameCount / 60);
+            const mDisp = Math.floor(timeSec / 60);
+            const sDisp = (timeSec % 60).toString().padStart(2, '0');
+            const earnedXp = timeSec + (gameState.player.lv * 5);
+            globalData.xp += earnedXp; saveData();
+
+            document.getElementById('modal-title-go').innerText = "GAME OVER";
+            document.getElementById('modal-title-go').style.color = "#d06060";
+            
+            document.getElementById('result-stats').innerHTML = `生存時間: <b>${mDisp}:${sDisp}</b><br>到達レベル: <b>Lv.${gameState.player.lv}</b>`;
+            document.getElementById('result-xp').innerText = `+${earnedXp}`;
+            document.getElementById('game-over-modal').style.display = 'block';
+        }
+
+        function triggerGameClear() {
+            gameState.isGameOver = true;
+            const timeSec = Math.floor(gameState.frameCount / 60);
+            const mDisp = Math.floor(timeSec / 60);
+            const sDisp = (timeSec % 60).toString().padStart(2, '0');
+            
+            const earnedXp = (timeSec + (gameState.player.lv * 5)) * 2;
+            globalData.xp += earnedXp; saveData();
+
+            document.getElementById('modal-title-go').innerText = "GAME CLEAR!";
+            document.getElementById('modal-title-go').style.color = "#d0a060";
+            
+            document.getElementById('result-stats').innerHTML = `生存時間: <b>${mDisp}:${sDisp}</b><br>到達レベル: <b>Lv.${gameState.player.lv}</b>`;
+            document.getElementById('result-xp').innerText = `+${earnedXp} (CLEAR BONUS x2!)`;
+            document.getElementById('game-over-modal').style.display = 'block';
+        }
+
+        function gameLoop(timestamp) {
+            if (gameState.isGameOver) return; 
+            animationId = requestAnimationFrame(gameLoop);
+            
+            if (gameState.isPaused) { lastFrameTime = timestamp; return; }
+            if (!timestamp) timestamp = performance.now();
+            if (timestamp - lastFrameTime < 16.6) return;
+            lastFrameTime = timestamp;
+            
+            ctx.clearRect(0, 0, 800, 600);
+            ctx.save(); ctx.strokeStyle = "rgba(0,0,0,0.05)"; ctx.lineWidth = 1;
+            for(let i=0; i<600; i+=30) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(800, i); ctx.stroke(); }
+            ctx.restore();
+            
+            gameState.frameCount++;
+            if (gameState.player.invincible > 0) gameState.player.invincible--;
+
+            if (gameState.frameCount === 18000) gameState.enemies.push(new BossEnemy('mid', gameState.player.lv));
+            if (gameState.frameCount === 36000) gameState.enemies.push(new BossEnemy('last', gameState.player.lv));
+
+            if (gameState.frameCount % gameState.spawnRate === 0) {
+                const m = Math.floor(gameState.frameCount / 3600); 
+                const p = (gameState.frameCount % 3600) / 3600; 
+                let weights = [];
+                if (m === 0) { weights.push({ type: 0, w: 1.0 }); } 
+                else if (m === 1) { weights.push({ type: 0, w: 1.0 }); weights.push({ type: 1, w: p }); } 
+                else { weights.push({ type: m - 2, w: 1.0 - p }); weights.push({ type: m - 1, w: 1.0 }); weights.push({ type: m, w: p }); }
+                const totalWeight = weights.reduce((sum, item) => sum + item.w, 0);
+                let r = Math.random() * totalWeight; let selectedType = 0;
+                for (let item of weights) { r -= item.w; if (r <= 0) { selectedType = item.type; break; } }
+                gameState.enemies.push(new Enemy(selectedType));
+            }
+
+            attack();
+
+            if (gameState.charType === 'ineq') {
+                gameState.ineqEffects.forEach(eff => {
+                    let progress = eff.hasVector ? 1.0 - (eff.life / eff.maxLife) : 1.0;
+                    let currentOrigin = {
+                        x: eff.startOrigin.x + (eff.endOrigin.x - eff.startOrigin.x) * progress,
+                        y: eff.startOrigin.y + (eff.endOrigin.y - eff.startOrigin.y) * progress
+                    };
+
+                    gameState.enemies.forEach(e => {
+                        if (e.ineqCooldown && e.ineqCooldown[eff.id] > 0) return;
+
+                        let hit = false;
+                        let mathEx = e.x - currentOrigin.x;
+                        let mathEy = currentOrigin.y - e.y;
+
+                        if (eff.baseType === 'CIRCLE') {
+                            let dist = Math.hypot(mathEx, mathEy);
+                            let angle = Math.atan2(mathEy, mathEx);
+                            if (angle < 0) angle += Math.PI * 2;
+                            let f_val = 0; let minDiff = Infinity;
+                            for(let fv of eff.funcValues) {
+                                let diff = Math.abs(fv.t - angle);
+                                if (diff < minDiff) { minDiff = diff; f_val = fv.val; }
+                            }
+                            let R = Math.max(0, 150 + f_val);
+
+                            if (eff.isBand) { hit = Math.abs(dist - R) < 20 + gameState.player.lineWidth*2; } 
+                            else { let isInside = dist < R; hit = eff.isInverted ? !isInside : isInside; }
+                        } else {
+                            let closestX = Math.round(mathEx / 10) * 10;
+                            let fv = eff.funcValues.find(v => v.x === closestX);
+                            if (fv) {
+                                if (eff.isBand) { hit = Math.abs(mathEy - fv.val) < 20 + gameState.player.lineWidth*2; } 
+                                else {
+                                    let isGreater = mathEy > fv.val;
+                                    let condition = eff.baseType === 'GREATER' ? isGreater : !isGreater;
+                                    hit = eff.isInverted ? !condition : condition;
+                                }
+                            }
+                        }
+
+                        if (hit) {
+                            e.hp -= eff.damage; e.hitFlash = 3;
+                            if (!e.ineqCooldown) e.ineqCooldown = {};
+                            e.ineqCooldown[eff.id] = 10; 
+                            if (e.hp <= 0) {
+                                const idx = gameState.enemies.indexOf(e);
+                                if (idx > -1) { 
+                                    gameState.enemies.splice(idx, 1); 
+                                    if(e.isBoss && e.bossType === 'last') triggerGameClear(); else gainXp(e.xp); 
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+
+            gameState.enemies.forEach((e, i) => {
+                e.update(); e.draw();
+                if (e.isBoss && gameState.frameCount % e.attackInterval === 0) e.bossAttack();
+                if (Math.hypot(e.x - gameState.player.x, e.y - gameState.player.y) < e.size + gameState.player.size/2) {
+                    damagePlayer(1);
+                    if (!e.isBoss) gameState.enemies.splice(i, 1); 
+                }
+            });
+
+            ctx.globalCompositeOperation = 'source-over'; 
+            gameState.enemyEffects.forEach((eff, i) => {
+                ctx.save();
+                ctx.strokeStyle = `rgba(180, 50, 50, ${eff.life / 15})`;
+                ctx.shadowColor = "rgba(180, 50, 50, 0.8)";
+                ctx.lineWidth = eff.lineWidth; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.shadowBlur = 4;
+                ctx.beginPath();
+                eff.points.forEach((p, j) => { if(j===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+                ctx.stroke(); ctx.restore();
+                
+                if (!eff.hasHit) {
+                    let hitPlayer = false;
+                    for(const p of eff.points) {
+                        if (Math.hypot(p.x - gameState.player.x, p.y - gameState.player.y) < gameState.player.size/2 + eff.lineWidth) { hitPlayer = true; break; }
+                    }
+                    if (hitPlayer && gameState.player.invincible <= 0) { damagePlayer(5); eff.hasHit = true; }
+                }
+                eff.life--; if (eff.life <= 0) gameState.enemyEffects.splice(i, 1);
+            });
+
+            gameState.effects.forEach((eff, i) => {
+                let progress = eff.hasVector ? 1.0 - (eff.life / eff.maxLife) : 1.0;
+                let currentOrigin = {
+                    x: eff.startOrigin.x + (eff.endOrigin.x - eff.startOrigin.x) * progress,
+                    y: eff.startOrigin.y + (eff.endOrigin.y - eff.startOrigin.y) * progress
+                };
+
+                let worldPts = eff.localPoints.map(p => {
+                    let wx = p.lx + currentOrigin.x;
+                    let wy = p.ly + currentOrigin.y;
+                    if (eff.hasLim) { wx = ((wx % 800) + 800) % 800; wy = ((wy % 600) + 600) % 600; }
+                    return { x: wx, y: wy };
+                });
+
+                if (eff.hasVector || eff.life === eff.maxLife) {
+                    gameState.enemies.forEach(e => {
+                        if (eff.hitEnemies.has(e)) return; 
+                        let hit = false;
+                        for (let p of worldPts) {
+                            if (Math.hypot(e.x - p.x, e.y - p.y) < e.size + eff.lineWidth + 2) { hit = true; break; }
+                        }
+                        if (hit) {
+                            eff.hitEnemies.add(e);
+                            if (eff.isShadow) { e.fragile = 120; }
+                            else {
+                                let dmg = eff.damage;
+                                if (e.fragile > 0) { dmg *= 2; e.fragile = 0; }
+                                e.hp -= dmg; e.hitFlash = 5;
+                                if (e.hp <= 0) {
+                                    const idx = gameState.enemies.indexOf(e);
+                                    if (idx > -1) { 
+                                        gameState.enemies.splice(idx, 1); 
+                                        if(e.isBoss && e.bossType === 'last') triggerGameClear(); else gainXp(e.xp); 
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                ctx.save();
+                if (eff.isShadow) {
+                    ctx.setLineDash([5, 10]); ctx.strokeStyle = `rgba(180, 100, 200, ${eff.life / 20})`; ctx.shadowColor = "rgba(180, 100, 200, 0.5)";
+                } else {
+                    ctx.strokeStyle = `rgba(60, 60, 60, ${eff.life / 12})`; ctx.shadowColor = "rgba(60, 60, 60, 0.5)";
+                }
+                ctx.lineWidth = eff.lineWidth; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.shadowBlur = 2; 
+                ctx.beginPath();
+                for(let j=0; j<worldPts.length; j++) {
+                    const p = worldPts[j];
+                    if(j===0) ctx.moveTo(p.x,p.y); 
+                    else {
+                        const prev = worldPts[j-1];
+                        if (eff.hasLim && Math.hypot(p.x - prev.x, p.y - prev.y) > 200) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                    }
+                }
+                ctx.stroke(); ctx.restore();
+                eff.life--; if (eff.life <= 0) gameState.effects.splice(i, 1);
+            });
+
+            gameState.ineqEffects.forEach((eff, i) => {
+                let progress = eff.hasVector ? 1.0 - (eff.life / eff.maxLife) : 1.0;
+                let currentOrigin = {
+                    x: eff.startOrigin.x + (eff.endOrigin.x - eff.startOrigin.x) * progress,
+                    y: eff.startOrigin.y + (eff.endOrigin.y - eff.startOrigin.y) * progress
+                };
+
+                ctx.save();
+                let alpha = (eff.life / eff.maxLife) * 0.4; 
+                ctx.fillStyle = `rgba(100, 160, 200, ${alpha})`;
+                ctx.strokeStyle = `rgba(80, 140, 180, ${alpha * 2})`;
+                ctx.beginPath();
+                
+                if (eff.baseType === 'CIRCLE') {
+                    for(let j=0; j<eff.localPts.length; j++) {
+                        let p = eff.localPts[j];
+                        if (j===0) ctx.moveTo(p.lx + currentOrigin.x, p.ly + currentOrigin.y); 
+                        else ctx.lineTo(p.lx + currentOrigin.x, p.ly + currentOrigin.y);
+                    }
+                    ctx.closePath();
+                    if (eff.isInverted && !eff.isBand) {
+                        ctx.rect(800, 0, -800, 600); 
+                        ctx.fill("evenodd");
+                    } else if (eff.isBand) {
+                        ctx.lineWidth = 40 + gameState.player.lineWidth * 2; ctx.stroke();
+                    } else { ctx.fill(); }
+                } else {
+                    for(let j=0; j<eff.localPts.length; j++) {
+                        let p = eff.localPts[j];
+                        if (j===0) ctx.moveTo(p.lx + currentOrigin.x, p.ly + currentOrigin.y); 
+                        else ctx.lineTo(p.lx + currentOrigin.x, p.ly + currentOrigin.y);
+                    }
+                    if (eff.isBand) {
+                        ctx.lineWidth = 40 + gameState.player.lineWidth * 2; ctx.stroke();
+                    } else {
+                        let isGreater = eff.baseType === 'GREATER';
+                        if (eff.isInverted) isGreater = !isGreater;
+                        let endY = isGreater ? -1000 : 1600; 
+                        ctx.lineTo(eff.localPts[eff.localPts.length-1].lx + currentOrigin.x, endY);
+                        ctx.lineTo(eff.localPts[0].lx + currentOrigin.x, endY);
+                        ctx.closePath(); ctx.fill();
+                    }
+                }
+                ctx.restore();
+                eff.life--; if (eff.life <= 0) gameState.ineqEffects.splice(i, 1);
+            });
+
+            if (gameState.player.invincible <= 0 || Math.floor(gameState.frameCount / 5) % 2 === 0) {
+                ctx.save(); ctx.fillStyle = "#b0b0b0"; ctx.strokeStyle = "#666666"; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(gameState.player.x, gameState.player.y, gameState.player.size / 2, 0, Math.PI * 2);
+                ctx.fill(); ctx.stroke(); ctx.restore();
+            }
+
+            const timeSec = Math.floor(gameState.frameCount / 60);
+            const mDisp = Math.floor(timeSec / 60);
+            const sDisp = (timeSec % 60).toString().padStart(2, '0');
+            document.getElementById('time-val').innerText = `${mDisp}:${sDisp}`;
+            
+            document.getElementById('hp-bar').style.width = Math.max(0, (gameState.player.hp / gameState.player.maxHp) * 100) + "%";
+            document.getElementById('xp-bar').style.width = (gameState.player.xp / gameState.player.nextXp * 100) + "%";
+            document.getElementById('lv-val').innerText = gameState.player.lv;
+            
+            const attacksPerSec = (60 / gameState.player.attackInterval).toFixed(1);
+            document.getElementById('stats-list').innerText = `HP: ${gameState.player.hp}/${gameState.player.maxHp} | ATK: ${gameState.player.damage.toFixed(1)} | Base SPD: ${attacksPerSec}/s`;
+            
+            const activeText = gameState.formulas.map(f => {
+                let text = `[${f.name}]`; let vars = f.variables.map(v => v.name).join(' & ') || '自分';
+                let intCount = f.components.filter(c => c.code === 'INT').length;
+                let actualSpd = (60 / (gameState.player.attackInterval + intCount * 15)).toFixed(1);
+                text += `<br>  📍基準: ${vars} (速: ${actualSpd}/s)`;
+                if (f.components.length > 0) text += "<br>  └ 構成: " + f.components.map(c => c.name).join(" + ");
+                else text += "<br>  └ 構成: なし";
+                return text;
+            }).join('<br><br>');
+            document.getElementById('formula-list').innerHTML = activeText;
+
+            if (gameState.player.hp <= 0) { gameState.player.hp = 0; triggerGameOver(); }
+        }
+
+        window.startGame = startGame;
+        window.showScreen = showScreen;
+        window.updateUpgradeUI = updateUpgradeUI;
+        window.buyUpgrade = buyUpgrade;
+        window.returnToTitle = returnToTitle;
+        window.initEncyclopedia = initEncyclopedia;
+    </script>
+</body>
+</html>
