@@ -102,8 +102,7 @@
         #remove-btn { background: #d08a8a; border-color: #a05050; text-align: center; font-weight: bold; color: #fff; }
         
         .global-xp-display { font-size: 16px; font-weight: bold; color: #8a6d50; margin-bottom: 10px; text-align: center;}
-
-        /* 呪いUIスタイル */
+        
         .curse-container {
             margin: 15px 0; background: #f0eee4; padding: 15px; border: 2px solid #888; border-radius: 8px; width: 100%; text-align: center; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
         }
@@ -254,7 +253,6 @@
             document.getElementById(screenId).classList.add('active-screen');
         }
 
-        // --- 呪い（やりこみ）システムのUI関数 ---
         function changeCurse(amt) {
             globalData.curse = Math.max(0, Math.min(100, (globalData.curse || 0) + amt));
             saveData();
@@ -351,10 +349,8 @@
             if (globalData.xp >= cost) { globalData.xp -= cost; globalData.upgrades[id] = (globalData.upgrades[id] || 0) + 1; saveData(); updateUpgradeUI(); }
         }
 
-        // --- 呪いレベルに応じたスポーンレートの計算 ---
         function getSpawnRate(lv, curse) {
             let baseRate = Math.max(10, 60 - Math.floor(lv * 1.5));
-            // 呪い1につき出現速度(頻度)が1%増加 = フレーム間隔は短くなる
             return Math.max(2, Math.floor(baseRate / (1 + curse * 0.01)));
         }
 
@@ -395,7 +391,6 @@
                 this.y = gameState.player.y + Math.sin(angle) * dist;
                 this.hitFlash = 0; this.fragile = 0; this.ineqCooldown = {}; this.isBoss = false;
                 this.typeIdx = typeIdx; this.n = typeIdx + 3; 
-                // 呪いレベルによるHP強化
                 let curseMult = 1 + (gameState.curseLevel * 0.01);
                 this.maxHp = Math.floor((1 + this.typeIdx * 2) * curseMult); 
                 this.hp = this.maxHp;
@@ -427,19 +422,16 @@
             constructor(bossType, lv) {
                 super(0); this.isBoss = true; this.bossType = bossType; 
                 this.n = bossType === 'mid' ? 8 : 12; this.size = bossType === 'mid' ? 35 : 50; this.color = bossType === 'mid' ? '#c48' : '#822'; 
-                
-                // 呪いレベルによるHP強化
                 let curseMult = 1 + (gameState.curseLevel * 0.01);
                 let baseBossHp = bossType === 'mid' ? 1000 + lv * 10 : 2500 + lv * 20;
                 this.maxHp = Math.floor(baseBossHp * curseMult); 
                 this.hp = this.maxHp;
-                
                 this.speed = 1.0 + (lv * 0.02); this.xp = bossType === 'mid' ? 300 : 0; 
                 this.formulas = bossType === 'mid' ? ['ROSE', 'SIN'] : ['CIRCLE', 'PARABOLA'];
                 this.state = 'APPROACH'; this.attackDelay = 0; this.timer = 0;
             }
             update() {
-                super.update();
+                for (let k in this.ineqCooldown) if(this.ineqCooldown[k]>0) this.ineqCooldown[k]--;
                 if (this.state === 'APPROACH') {
                     const d = Math.hypot(gameState.player.x-this.x, gameState.player.y-this.y);
                     this.x += ((gameState.player.x-this.x)/d)*this.speed; this.y += ((gameState.player.y-this.y)/d)*this.speed;
@@ -479,13 +471,14 @@
             return { x: cx, y: cy };
         }
 
-        function attack() { if (gameState.charType === 'eq') attackEq(); else attackIneq(); }
-
         function attackEq() {
             const T = gameState.frameCount;
+            const relRan = { x: 0, y: 0 }; // 最適化のため一旦ダミー
+            
             gameState.formulas.forEach(f => {
                 let intC = f.components.filter(c => c.code === 'INT').length;
                 if (T % (gameState.player.attackInterval + intC*15) !== 0) return;
+                
                 let target = null;
                 if (f.variables.length > 0) {
                     let v = f.variables[0];
@@ -495,19 +488,26 @@
                         target = { x: sx/gameState.enemies.length, y: sy/gameState.enemies.length };
                     } else target = getTarget(v.code);
                 }
+                
+                // relRan を正しく設定（Random Noise用）
+                let rEnt = getTarget('RAN');
+                if (rEnt) { relRan.x = rEnt.x - gameState.player.x; relRan.y = -(rEnt.y - gameState.player.y); }
+                
                 let st = { x: gameState.player.x, y: gameState.player.y }, ed = target || st;
                 let hasV = f.components.some(c => c.code === 'LAUNCH');
                 if (!hasV) st = ed;
+                
                 let isC = f.components.some(c => c.code === 'CIRCLE'), roseC = f.components.filter(c => c.code === 'ROSE').length;
                 let invC = f.components.filter(c => c.code === 'INVERT').length, tanC = f.components.filter(c => c.code === 'TAN').length;
                 let tR = 400 + f.components.filter(c => c.code === 'LIM').length*400, lPts = [];
+                
                 for (let t = -tR; t <= tR; t += 4) {
                     let lx = t, ly = 0;
                     if (roseC > 0) { let a=(t+tR)*(Math.PI*2/800), r=Math.cos((2+roseC*2)*a)*100; lx=r*Math.cos(a); ly=r*Math.sin(a); }
                     else if (isC) { let a=(t+tR)*(Math.PI*2/800); lx=Math.cos(a)*80; ly=Math.sin(a)*80; }
                     for (let c of f.components) {
                         if (['CIRCLE','ROSE','INVERT','TAN','INT','LIM','IMG','SIGMA','LAUNCH'].includes(c.code)) continue;
-                        try { ly += new Function('x','T','RAN_x','RAN_y',`return ${c.code}`)(lx,T,0,0); } catch(e){}
+                        try { ly += new Function('x','T','RAN_x','RAN_y',`return ${c.code}`)(lx,T,relRan.x,relRan.y); } catch(e){}
                     }
                     if (tanC > 0) { let tv=Math.tan(t/20)*40*tanC; lx+=Math.min(800,Math.max(-800,tv)); }
                     if (invC%2) ly=-ly; lPts.push({lx, ly: -ly});
@@ -519,7 +519,7 @@
             });
         }
 
-        function evalIneq(x, comps, T) {
+        function evalIneq(x, comps, T, relRan) {
             let y = 0;
             for (let c of comps) {
                 if (['BASE_LESS','BASE_CIRCLE','INVERT_INEQ','BAND_INEQ','PERSIST','LAUNCH'].includes(c.code)) continue;
@@ -528,15 +528,18 @@
                 else if (c.code === 'NOISE_AREA') { let n=Math.sin(x*12.9898+T*0.1)*43758.5; y+=(n-Math.floor(n)-0.5)*50; }
                 else if (c.code === 'STEP_AREA') y += Math.floor((x+T*2)/60)*30; 
                 else if (c.code === 'TAN_AREA') { let tv=Math.tan(x/40+T/10)*40; y+=Math.min(600,Math.max(-600,tv)); }
-                else try { y += new Function('x','T','return '+c.code)(x,T); } catch(e){}
+                else try { y += new Function('x','T','RAN_x','RAN_y','return '+c.code)(x,T,relRan.x,relRan.y); } catch(e){}
             }
             return Math.min(1000, Math.max(-1000, y));
         }
 
         function attackIneq() {
             const T = gameState.frameCount;
+            const relRan = { x: 0, y: 0 };
+            
             gameState.formulas.forEach(f => {
                 if (T % gameState.player.attackInterval !== 0) return;
+                
                 let target = null;
                 if (f.variables.length > 0) {
                     let v = f.variables[0];
@@ -546,6 +549,10 @@
                         target = { x: sx/gameState.enemies.length, y: sy/gameState.enemies.length };
                     } else target = getTarget(v.code);
                 }
+                
+                let rEnt = getTarget('RAN');
+                if (rEnt) { relRan.x = rEnt.x - gameState.player.x; relRan.y = -(rEnt.y - gameState.player.y); }
+                
                 let st = { x: gameState.player.x, y: gameState.player.y }, ed = target || st;
                 let hasV = f.components.some(c => c.code === 'LAUNCH');
                 if (!hasV) st = ed;
@@ -553,13 +560,13 @@
                 let lPts = [], fVals = [];
                 if (base === 'CIRCLE') {
                     for (let t=0; t<=Math.PI*2+0.1; t+=0.1) {
-                        let fv = evalIneq(t*200, f.components, T);
+                        let fv = evalIneq(t*200, f.components, T, relRan);
                         let r = Math.max(0, 150 + fv);
                         lPts.push({lx: r*Math.cos(t), ly: -r*Math.sin(t)}); fVals.push({t, val: fv});
                     }
                 } else {
                     for (let x=-400; x<=400; x+=10) {
-                        let fv = evalIneq(x, f.components, T);
+                        let fv = evalIneq(x, f.components, T, relRan);
                         lPts.push({lx: x, ly: -fv}); fVals.push({x, val: fv});
                     }
                 }
@@ -575,8 +582,6 @@
         function endG(t, c, m) {
             gameState.isGameOver = true; 
             const s = Math.floor(gameState.frameCount / 60);
-            
-            // 呪いレベルによるXPボーナス適用
             const curseBonus = 1 + (gameState.curseLevel * 0.01);
             const xp = Math.floor((s + gameState.player.lv * 5) * m * curseBonus); 
             
@@ -606,13 +611,19 @@
                 for(let i of w){r-=i.w; if(r<=0){sel=i.t;break;}}
                 gameState.enemies.push(new Enemy(sel));
             }
-            attack();
+            
+            if (gameState.charType === 'eq') attackEq(); else attackIneq();
+
+            // 【バグ修正】不等号の当たり判定（逆順ループ）
             if (gameState.charType === 'ineq') {
                 gameState.ineqEffects.forEach(eff => {
                     let prg = eff.hasVector ? 1.0 - (eff.life/eff.maxLife) : 1.0;
                     let co = { x: eff.startOrigin.x+(eff.endOrigin.x-eff.startOrigin.x)*prg, y: eff.startOrigin.y+(eff.endOrigin.y-eff.startOrigin.y)*prg };
-                    gameState.enemies.forEach(e => {
-                        if (e.ineqCooldown[eff.id] > 0) return;
+                    
+                    for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                        let e = gameState.enemies[i];
+                        if (e.ineqCooldown[eff.id] > 0) continue;
+
                         let hit = false, mx = e.x - co.x, my = co.y - e.y;
                         if (eff.baseType === 'CIRCLE') {
                             let d = Math.hypot(mx, my), a = Math.atan2(my, mx); if(a<0) a+=Math.PI*2;
@@ -625,34 +636,66 @@
                                 else { let g = my > fv.val; hit = eff.isInverted ? (eff.baseType==='GREATER'?!g:g) : (eff.baseType==='GREATER'?g:!g); }
                             }
                         }
-                        if (hit) { e.hp -= eff.damage; e.hitFlash=3; e.ineqCooldown[eff.id]=10; if(e.hp<=0){const idx=gameState.enemies.indexOf(e); if(idx>-1){gameState.enemies.splice(idx,1); if(e.isBoss&&e.bossType==='last')triggerGameClear(); else gainXp(e.xp);}} }
-                    });
+                        if (hit) { 
+                            e.hp -= eff.damage; e.hitFlash=3; e.ineqCooldown[eff.id]=10; 
+                            if(e.hp<=0){
+                                gameState.enemies.splice(i,1); 
+                                if(e.isBoss&&e.bossType==='last')triggerGameClear(); else gainXp(e.xp);
+                            } 
+                        }
+                    }
                 });
             }
-            gameState.enemies.forEach((e, i) => {
+
+            // 【バグ修正】接触判定（逆順ループ）
+            for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                let e = gameState.enemies[i];
                 e.update(); e.draw();
                 if (e.isBoss && gameState.frameCount % e.attackInterval === 0) e.bossAttack();
-                if (Math.hypot(e.x-gameState.player.x, e.y-gameState.player.y) < e.size+gameState.player.size/2) { damagePlayer(1); if(!e.isBoss) gameState.enemies.splice(i,1); }
-            });
+                if (Math.hypot(e.x-gameState.player.x, e.y-gameState.player.y) < e.size+gameState.player.size/2) { 
+                    damagePlayer(1); 
+                    if(!e.isBoss) gameState.enemies.splice(i,1); 
+                }
+            }
+
             ctx.globalCompositeOperation = 'source-over';
-            gameState.enemyEffects.forEach((eff, i) => {
+            
+            // ボス攻撃判定（逆順ループでプレイヤーを傷つけるだけなのでspliceは自エフェクトのみ）
+            for (let i = gameState.enemyEffects.length - 1; i >= 0; i--) {
+                let eff = gameState.enemyEffects[i];
                 ctx.save(); ctx.strokeStyle = `rgba(180,50,50,${eff.life/15})`; ctx.lineWidth = eff.lineWidth; ctx.beginPath();
                 eff.points.forEach((p, j) => { if(j===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); }); ctx.stroke(); ctx.restore();
                 if (!eff.hasHit) { let h = false; for(let p of eff.points) if(Math.hypot(p.x-gameState.player.x, p.y-gameState.player.y)<gameState.player.size/2+eff.lineWidth){h=true;break;} if(h&&gameState.player.invincible<=0){damagePlayer(5);eff.hasHit=true;} }
                 if (--eff.life <= 0) gameState.enemyEffects.splice(i,1);
-            });
-            gameState.effects.forEach((eff, i) => {
+            }
+
+            // 【バグ修正】等号エフェクト描画と当たり判定（逆順ループ）
+            for (let i = gameState.effects.length - 1; i >= 0; i--) {
+                let eff = gameState.effects[i];
                 let prg = eff.hasVector ? 1.0 - (eff.life/eff.maxLife) : 1.0;
                 let co = { x: eff.startOrigin.x+(eff.endOrigin.x-eff.startOrigin.x)*prg, y: eff.startOrigin.y+(eff.endOrigin.y-eff.startOrigin.y)*prg };
                 let wPts = eff.localPoints.map(p => {
                     let wx = p.lx+co.x, wy = p.ly+co.y; if(eff.hasLim){wx=((wx%800)+800)%800;wy=((wy%600)+600)%600;} return {x:wx,y:wy};
                 });
+                
                 if (eff.hasVector || eff.life === eff.maxLife) {
-                    gameState.enemies.forEach(e => {
-                        if (eff.hitEnemies.has(e)) return;
+                    for (let k = gameState.enemies.length - 1; k >= 0; k--) {
+                        let e = gameState.enemies[k];
+                        if (eff.hitEnemies.has(e)) continue;
                         let h = false; for(let p of wPts) if(Math.hypot(e.x-p.x,e.y-p.y)<e.size+eff.lineWidth+2){h=true;break;}
-                        if(h){ eff.hitEnemies.add(e); if(eff.isShadow) e.fragile=120; else { let d=eff.damage; if(e.fragile>0){d*=2;e.fragile=0;} e.hp-=d; e.hitFlash=5; if(e.hp<=0){const idx=gameState.enemies.indexOf(e); if(idx>-1){gameState.enemies.splice(idx,1); if(e.isBoss&&e.bossType==='last')triggerGameClear(); else gainXp(e.xp);}}} }
-                    });
+                        if(h){ 
+                            eff.hitEnemies.add(e); 
+                            if(eff.isShadow) e.fragile=120; 
+                            else { 
+                                let d=eff.damage; if(e.fragile>0){d*=2;e.fragile=0;} 
+                                e.hp-=d; e.hitFlash=5; 
+                                if(e.hp<=0){
+                                    gameState.enemies.splice(k,1); 
+                                    if(e.isBoss&&e.bossType==='last')triggerGameClear(); else gainXp(e.xp);
+                                }
+                            } 
+                        }
+                    }
                 }
                 ctx.save(); if(eff.isShadow){ctx.setLineDash([5,10]); ctx.strokeStyle=`rgba(180,100,200,${eff.life/20})`;} else ctx.strokeStyle=`rgba(60,60,60,${eff.life/12})`;
                 ctx.lineWidth = eff.lineWidth; ctx.beginPath();
@@ -660,8 +703,11 @@
                     if(j===0) ctx.moveTo(wPts[j].x, wPts[j].y); else { if(eff.hasLim && Math.hypot(wPts[j].x-wPts[j-1].x, wPts[j].y-wPts[j-1].y)>200) ctx.moveTo(wPts[j].x, wPts[j].y); else ctx.lineTo(wPts[j].x, wPts[j].y); }
                 }
                 ctx.stroke(); ctx.restore(); if(--eff.life <= 0) gameState.effects.splice(i,1);
-            });
-            gameState.ineqEffects.forEach((eff, i) => {
+            }
+
+            // 不等号エフェクト(領域)描画
+            for (let i = gameState.ineqEffects.length - 1; i >= 0; i--) {
+                let eff = gameState.ineqEffects[i];
                 let prg = eff.hasVector ? 1.0 - (eff.life/eff.maxLife) : 1.0;
                 let co = { x: eff.startOrigin.x+(eff.endOrigin.x-eff.startOrigin.x)*prg, y: eff.startOrigin.y+(eff.endOrigin.y-eff.startOrigin.y)*prg };
                 ctx.save(); let a = (eff.life/eff.maxLife)*0.4; ctx.fillStyle=`rgba(100,160,200,${a})`; ctx.beginPath();
@@ -674,14 +720,14 @@
                     else { let g=eff.baseType==='GREATER'; if(eff.isInverted)g=!g; let ey=g?-1000:1600; ctx.lineTo(eff.localPts[eff.localPts.length-1].lx+co.x, ey); ctx.lineTo(eff.localPts[0].lx+co.x, ey); ctx.closePath(); ctx.fill(); }
                 }
                 ctx.restore(); if(--eff.life <= 0) gameState.ineqEffects.splice(i,1);
-            });
+            }
+
             if (gameState.player.invincible <= 0 || Math.floor(gameState.frameCount / 5) % 2 === 0) { ctx.save(); ctx.fillStyle = "#b0b0b0"; ctx.strokeStyle = "#666"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(gameState.player.x, gameState.player.y, gameState.player.size/2, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore(); }
             const s = Math.floor(gameState.frameCount/60); document.getElementById('time-val').innerText = `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
             document.getElementById('hp-bar').style.width = (gameState.player.hp/gameState.player.maxHp*100) + "%";
             document.getElementById('xp-bar').style.width = (gameState.player.xp/gameState.player.nextXp*100) + "%";
             document.getElementById('lv-val').innerText = gameState.player.lv;
             
-            // プレイ中に呪いレベルに応じたスポーンレートの更新（レベルアップ等で変化するbaseRateに対して）
             gameState.spawnRate = getSpawnRate(gameState.player.lv, gameState.curseLevel);
             
             document.getElementById('stats-list').innerText = `HP:${gameState.player.hp}/${gameState.player.maxHp} | ATK:${gameState.player.damage.toFixed(1)} | SPD:${(60/gameState.player.attackInterval).toFixed(1)}/s`;
