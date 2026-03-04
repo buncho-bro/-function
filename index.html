@@ -102,7 +102,8 @@
         #remove-btn { background: #d08a8a; border-color: #a05050; text-align: center; font-weight: bold; color: #fff; }
         
         .global-xp-display { font-size: 16px; font-weight: bold; color: #8a6d50; margin-bottom: 10px; text-align: center;}
-        
+
+        /* 呪いUIスタイル */
         .curse-container {
             margin: 15px 0; background: #f0eee4; padding: 15px; border: 2px solid #888; border-radius: 8px; width: 100%; text-align: center; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
         }
@@ -473,27 +474,32 @@
 
         function attackEq() {
             const T = gameState.frameCount;
-            const relRan = { x: 0, y: 0 }; // 最適化のため一旦ダミー
+            const relRan = { x: 0, y: 0 };
             
             gameState.formulas.forEach(f => {
                 let intC = f.components.filter(c => c.code === 'INT').length;
                 if (T % (gameState.player.attackInterval + intC*15) !== 0) return;
                 
-                let target = null;
+                // 【修正箇所】対象の「座標数値だけ」をコピーして保持する
+                let targetPoint = null;
                 if (f.variables.length > 0) {
                     let v = f.variables[0];
-                    if (v.code === 'PTR') target = { x: pointerCoords.x, y: pointerCoords.y };
-                    else if (v.code === 'AVG' && gameState.enemies.length) {
+                    if (v.code === 'PTR') {
+                        targetPoint = { x: pointerCoords.x, y: pointerCoords.y };
+                    } else if (v.code === 'AVG' && gameState.enemies.length) {
                         let sx=0, sy=0; gameState.enemies.forEach(e=>{sx+=e.x;sy+=e.y;});
-                        target = { x: sx/gameState.enemies.length, y: sy/gameState.enemies.length };
-                    } else target = getTarget(v.code);
+                        targetPoint = { x: sx/gameState.enemies.length, y: sy/gameState.enemies.length };
+                    } else {
+                        let tObj = getTarget(v.code);
+                        if (tObj) targetPoint = { x: tObj.x, y: tObj.y }; // 参照ではなく数値をコピー
+                    }
                 }
                 
-                // relRan を正しく設定（Random Noise用）
                 let rEnt = getTarget('RAN');
                 if (rEnt) { relRan.x = rEnt.x - gameState.player.x; relRan.y = -(rEnt.y - gameState.player.y); }
                 
-                let st = { x: gameState.player.x, y: gameState.player.y }, ed = target || st;
+                let st = { x: gameState.player.x, y: gameState.player.y };
+                let ed = targetPoint || { x: gameState.player.x, y: gameState.player.y };
                 let hasV = f.components.some(c => c.code === 'LAUNCH');
                 if (!hasV) st = ed;
                 
@@ -540,22 +546,29 @@
             gameState.formulas.forEach(f => {
                 if (T % gameState.player.attackInterval !== 0) return;
                 
-                let target = null;
+                // 【修正箇所】対象の「座標数値だけ」をコピーして保持する
+                let targetPoint = null;
                 if (f.variables.length > 0) {
                     let v = f.variables[0];
-                    if (v.code === 'PTR') target = { x: pointerCoords.x, y: pointerCoords.y };
-                    else if (v.code === 'AVG' && gameState.enemies.length) {
+                    if (v.code === 'PTR') {
+                        targetPoint = { x: pointerCoords.x, y: pointerCoords.y };
+                    } else if (v.code === 'AVG' && gameState.enemies.length) {
                         let sx=0, sy=0; gameState.enemies.forEach(e=>{sx+=e.x;sy+=e.y;});
-                        target = { x: sx/gameState.enemies.length, y: sy/gameState.enemies.length };
-                    } else target = getTarget(v.code);
+                        targetPoint = { x: sx/gameState.enemies.length, y: sy/gameState.enemies.length };
+                    } else {
+                        let tObj = getTarget(v.code);
+                        if (tObj) targetPoint = { x: tObj.x, y: tObj.y }; // 参照ではなく数値をコピー
+                    }
                 }
                 
                 let rEnt = getTarget('RAN');
                 if (rEnt) { relRan.x = rEnt.x - gameState.player.x; relRan.y = -(rEnt.y - gameState.player.y); }
                 
-                let st = { x: gameState.player.x, y: gameState.player.y }, ed = target || st;
+                let st = { x: gameState.player.x, y: gameState.player.y };
+                let ed = targetPoint || { x: gameState.player.x, y: gameState.player.y };
                 let hasV = f.components.some(c => c.code === 'LAUNCH');
                 if (!hasV) st = ed;
+                
                 let base = f.components.some(c=>c.code==='BASE_LESS') ? 'LESS' : (f.components.some(c=>c.code==='BASE_CIRCLE') ? 'CIRCLE' : 'GREATER');
                 let lPts = [], fVals = [];
                 if (base === 'CIRCLE') {
@@ -592,6 +605,160 @@
             document.getElementById('game-over-modal').style.display = 'block';
         }
 
+        function gainXp(amt) {
+            gameState.player.xp += amt;
+            if (gameState.player.xp >= gameState.player.nextXp) levelUp();
+        }
+
+        function levelUp() {
+            gameState.player.lv++;
+            gameState.player.xp -= gameState.player.nextXp;
+            gameState.player.nextXp = Math.floor(gameState.player.nextXp * 1.5);
+            gameState.spawnRate = getSpawnRate(gameState.player.lv, gameState.curseLevel);
+            gameState.isPaused = true;
+            gameState.currentUpgrades = null;
+
+            if (gameState.player.lv % 10 === 0) {
+                const newSlotId = gameState.formulas.length + 1;
+                let nameStr = gameState.charType === 'eq' ? "スロット" : "領域";
+                gameState.formulas.push({ id: newSlotId, name: `${nameStr}${newSlotId}`, components: [], variables: [] });
+            }
+            showLevelUpModal();
+        }
+
+        function showLevelUpModal() {
+            const modal = document.getElementById('level-up-modal');
+            const optionsDiv = document.getElementById('options');
+            const removeBtn = document.getElementById('remove-btn');
+            const rerollBtn = document.getElementById('reroll-btn');
+            
+            optionsDiv.innerHTML = '';
+            modal.style.display = 'block';
+            document.getElementById('modal-title').innerText = "LEVEL UP!";
+            document.getElementById('modal-desc').innerText = "報酬を選択してください：";
+
+            const poolSource = gameState.charType === 'eq' ? upgradesEq : upgradesIneq;
+
+            if (!gameState.currentUpgrades) {
+                let shuffled = [];
+                let pool = [...poolSource];
+                for (let i = 0; i < 3; i++) {
+                    if (pool.length === 0) break;
+                    let totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+                    let r = Math.random() * totalWeight;
+                    for (let j = 0; j < pool.length; j++) {
+                        r -= pool[j].weight;
+                        if (r <= 0) { shuffled.push(pool[j]); pool.splice(j, 1); break; }
+                    }
+                }
+                gameState.currentUpgrades = shuffled;
+            }
+
+            gameState.currentUpgrades.forEach(upg => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                let badgeClass = 'type-badge'; let badgeText = 'FORMULA';
+                if (upg.code === 'TAN' || upg.code === 'TAN_AREA') { badgeClass += ' rare'; badgeText = 'RARE'; }
+                else if (upg.type === 'stat') { badgeClass += ' stat'; badgeText = 'STATUS'; }
+                else if (upg.type === 'variable') { badgeClass += ' target'; badgeText = 'TARGET'; }
+                else if (upg.type === 'target_mod') { badgeClass += ' target-mod'; badgeText = 'TARGET MOD'; }
+                else if (upg.type === 'modifier') { badgeClass += ' mod'; badgeText = 'MODIFIER'; }
+                else if (upg.type === 'base') { badgeClass += ' base'; badgeText = 'BASE AREA'; }
+
+                btn.innerHTML = `<span class="${badgeClass}">${badgeText}</span><div style="display:inline-block; vertical-align:middle;"><b style="color:#333; font-size:14px;">${upg.name}</b></div><br><small style="color:#666; display:block; margin-top:5px; font-size:11px;">${upg.desc}</small>`;
+                btn.onclick = () => {
+                    if (upg.type === 'stat') { upg.action(); closeModal(); } 
+                    else {
+                        if (gameState.formulas.length > 1) showSlotSelection(upg);
+                        else {
+                            if (upg.type === 'variable') gameState.formulas[0].variables = [{ name: upg.shortName, code: upg.code }];
+                            else gameState.formulas[0].components.push({ name: upg.shortName, code: upg.code });
+                            closeModal();
+                        }
+                    }
+                };
+                optionsDiv.appendChild(btn);
+            });
+
+            rerollBtn.style.display = 'block';
+            rerollBtn.innerText = `🔄 リロールする (残り${gameState.rerollsLeft}回)`;
+            rerollBtn.disabled = gameState.rerollsLeft <= 0;
+            rerollBtn.onclick = () => {
+                if (gameState.rerollsLeft > 0) {
+                    gameState.rerollsLeft--;
+                    gameState.currentUpgrades = null;
+                    showLevelUpModal();
+                }
+            };
+
+            const hasElements = gameState.formulas.some(f => f.components.length > 0 || f.variables.length > 0);
+            if (hasElements) {
+                removeBtn.style.display = 'block'; removeBtn.onclick = () => showRemoveSelection();
+            } else { removeBtn.style.display = 'none'; }
+        }
+
+        function showSlotSelection(upg) {
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+            const optionsDiv = document.getElementById('options');
+            document.getElementById('remove-btn').style.display = 'none';
+            document.getElementById('reroll-btn').style.display = 'none';
+            title.innerText = "スロット選択"; desc.innerText = `「${upg.shortName}」を追加するスロット：`;
+            optionsDiv.innerHTML = '';
+
+            gameState.formulas.forEach((slot) => {
+                const btn = document.createElement('button'); btn.className = 'option-btn';
+                const vars = slot.variables.map(v => v.name).join(' & ') || '自分';
+                const comps = slot.components.map(c => c.name).join(' + ') || 'なし';
+                btn.innerHTML = `<b style="color:#333; font-size:14px;">${slot.name}</b><br><small style="color:#666; font-size:11px;">[基準] ${vars} / [関数] ${comps}</small>`;
+                btn.onclick = () => {
+                    if (upg.type === 'variable') slot.variables = [{ name: upg.shortName, code: upg.code }];
+                    else slot.components.push({ name: upg.shortName, code: upg.code });
+                    closeModal();
+                };
+                optionsDiv.appendChild(btn);
+            });
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'option-btn'; cancelBtn.style.background = '#ddd'; cancelBtn.style.color = '#333';
+            cancelBtn.innerText = "キャンセルして戻る";
+            cancelBtn.onclick = () => showLevelUpModal();
+            optionsDiv.appendChild(cancelBtn);
+        }
+
+        function showRemoveSelection() {
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+            const optionsDiv = document.getElementById('options');
+            document.getElementById('remove-btn').style.display = 'none';
+            document.getElementById('reroll-btn').style.display = 'none';
+            title.innerText = "要素の削除"; desc.innerText = "削除する要素を選んでください";
+            optionsDiv.innerHTML = '';
+
+            gameState.formulas.forEach((slot) => {
+                slot.variables.forEach((v, vIdx) => {
+                    const btn = document.createElement('button'); btn.className = 'option-btn';
+                    btn.innerHTML = `<span class="type-badge target">TARGET</span><b style="color:#a05050">${v.name}</b><br><small style="color:#666;">(${slot.name} の基準点)</small>`;
+                    btn.onclick = () => { slot.variables.splice(vIdx, 1); closeModal(); }; optionsDiv.appendChild(btn);
+                });
+                slot.components.forEach((comp, cIdx) => {
+                    const btn = document.createElement('button'); btn.className = 'option-btn';
+                    btn.innerHTML = `<span class="type-badge">FORMULA</span><b style="color:#a05050">${comp.name}</b><br><small style="color:#666;">(${slot.name} の要素)</small>`;
+                    btn.onclick = () => { slot.components.splice(cIdx, 1); closeModal(); }; optionsDiv.appendChild(btn);
+                });
+            });
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'option-btn'; cancelBtn.style.background = '#ddd'; cancelBtn.style.color = '#333';
+            cancelBtn.innerText = "キャンセルして戻る";
+            cancelBtn.onclick = () => showLevelUpModal();
+            optionsDiv.appendChild(cancelBtn);
+        }
+
+        function closeModal() {
+            document.getElementById('level-up-modal').style.display = 'none';
+            gameState.isPaused = false;
+            lastFrameTime = performance.now(); 
+        }
+
         function gameLoop(ts) {
             if (gameState.isGameOver) return; 
             animationId = requestAnimationFrame(gameLoop);
@@ -601,6 +768,7 @@
             ctx.clearRect(0,0,800,600);
             ctx.strokeStyle = "rgba(0,0,0,0.05)"; for(let i=0;i<600;i+=30){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(800,i);ctx.stroke();}
             gameState.frameCount++; if (gameState.player.invincible > 0) gameState.player.invincible--;
+            
             if (gameState.frameCount === 18000) gameState.enemies.push(new BossEnemy('mid', gameState.player.lv));
             if (gameState.frameCount === 36000) gameState.enemies.push(new BossEnemy('last', gameState.player.lv));
             
@@ -614,7 +782,6 @@
             
             if (gameState.charType === 'eq') attackEq(); else attackIneq();
 
-            // 【バグ修正】不等号の当たり判定（逆順ループ）
             if (gameState.charType === 'ineq') {
                 gameState.ineqEffects.forEach(eff => {
                     let prg = eff.hasVector ? 1.0 - (eff.life/eff.maxLife) : 1.0;
@@ -647,7 +814,6 @@
                 });
             }
 
-            // 【バグ修正】接触判定（逆順ループ）
             for (let i = gameState.enemies.length - 1; i >= 0; i--) {
                 let e = gameState.enemies[i];
                 e.update(); e.draw();
@@ -660,7 +826,6 @@
 
             ctx.globalCompositeOperation = 'source-over';
             
-            // ボス攻撃判定（逆順ループでプレイヤーを傷つけるだけなのでspliceは自エフェクトのみ）
             for (let i = gameState.enemyEffects.length - 1; i >= 0; i--) {
                 let eff = gameState.enemyEffects[i];
                 ctx.save(); ctx.strokeStyle = `rgba(180,50,50,${eff.life/15})`; ctx.lineWidth = eff.lineWidth; ctx.beginPath();
@@ -669,7 +834,6 @@
                 if (--eff.life <= 0) gameState.enemyEffects.splice(i,1);
             }
 
-            // 【バグ修正】等号エフェクト描画と当たり判定（逆順ループ）
             for (let i = gameState.effects.length - 1; i >= 0; i--) {
                 let eff = gameState.effects[i];
                 let prg = eff.hasVector ? 1.0 - (eff.life/eff.maxLife) : 1.0;
@@ -705,7 +869,6 @@
                 ctx.stroke(); ctx.restore(); if(--eff.life <= 0) gameState.effects.splice(i,1);
             }
 
-            // 不等号エフェクト(領域)描画
             for (let i = gameState.ineqEffects.length - 1; i >= 0; i--) {
                 let eff = gameState.ineqEffects[i];
                 let prg = eff.hasVector ? 1.0 - (eff.life/eff.maxLife) : 1.0;
