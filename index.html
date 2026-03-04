@@ -24,7 +24,7 @@
         }
         
         .menu-container {
-            width: 100%; max-width: 700px; height: 100%; max-height: 800px; 
+            width: 100%; max-width: 700px; height: 100%; max-height: 850px; 
             background: #f4f2e8; border: 2px solid #888; box-shadow: 5px 5px 15px rgba(0,0,0,0.1); 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             padding: 20px; overflow-y: auto;
@@ -32,7 +32,7 @@
         
         h1.title-logo { 
             font-size: clamp(32px, 10vw, 64px); 
-            margin-bottom: 30px; color: #333; border-bottom: 4px dashed #888; 
+            margin-bottom: 20px; color: #333; border-bottom: 4px dashed #888; 
             padding-bottom: 10px; letter-spacing: 5px; text-align: center;
         }
         h2 { color: #333; border-bottom: 2px dashed #888; padding-bottom: 10px; width: 100%; text-align: center; font-size: clamp(20px, 6vw, 24px); margin-top: 0;}
@@ -58,34 +58,28 @@
         
         .char-select-container { display: flex; gap: 20px; width: 100%; justify-content: center; flex-wrap: wrap; margin-bottom: 10px;}
         .char-card {
-            flex: 1; min-width: 260px; padding: 20px; border-radius: 8px; text-align: left;
+            flex: 1; min-width: 260px; padding: 15px; border-radius: 8px; text-align: left;
             display: flex; flex-direction: column;
         }
         .char-card.eq { background: #fffdf5; border: 2px solid #ccc; }
         .char-card.ineq { background: #f0f8ff; border: 2px solid #a0c8e0; }
         .char-card h3 { text-align: center; margin-top: 0; font-size: 22px; }
-        .char-card p { font-size: 13px; line-height: 1.6; flex-grow: 1; margin: 10px 0 20px 0; }
+        .char-card p { font-size: 13px; line-height: 1.6; flex-grow: 1; margin: 10px 0 15px 0; }
         .char-card .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; margin-bottom: 10px; width: 100%; text-align: center;}
 
-        /* --- ゲーム内UI：スマホスクロール対応 --- */
         #game-ui { 
             position: absolute; top: 10px; left: 10px; pointer-events: none; 
             width: calc(100% - 20px); max-width: 350px; z-index: 10;
             background: rgba(244, 242, 232, 0.9); 
             padding: 8px; border-radius: 8px; border: 1px solid rgba(136, 136, 136, 0.5);
-            max-height: 45vh; /* 画面の45%以上は占領しない */
-            display: flex; flex-direction: column;
+            max-height: 45vh; display: flex; flex-direction: column;
         }
         
         .bar-container { width: 100%; height: 8px; background: #ddd; margin-bottom: 5px; border: 1px solid #888; flex-shrink: 0; }
         #hp-bar { height: 100%; background: #d66060; transition: width 0.2s; } 
         #xp-bar { height: 100%; background: #60d6a0; transition: width 0.2s; } 
         
-        /* 統計とリストのスクロールエリア */
-        #ui-scroll-area {
-            overflow-y: auto; pointer-events: auto; /* ここだけスクロール可能にする */
-            flex-grow: 1;
-        }
+        #ui-scroll-area { overflow-y: auto; pointer-events: auto; flex-grow: 1; }
         
         #level-up-modal, #game-over-modal { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
@@ -108,6 +102,11 @@
         #remove-btn { background: #d08a8a; border-color: #a05050; text-align: center; font-weight: bold; color: #fff; }
         
         .global-xp-display { font-size: 16px; font-weight: bold; color: #8a6d50; margin-bottom: 10px; text-align: center;}
+
+        /* 呪いUIスタイル */
+        .curse-container {
+            margin: 15px 0; background: #f0eee4; padding: 15px; border: 2px solid #888; border-radius: 8px; width: 100%; text-align: center; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
     </style>
 </head>
 <body>
@@ -115,7 +114,7 @@
     <div id="title-screen" class="screen active-screen">
         <div class="menu-container">
             <h1 class="title-logo">殺戮関数</h1>
-            <button class="btn" onclick="showScreen('char-select-screen')">ゲームを始める</button>
+            <button class="btn" onclick="showScreen('char-select-screen'); updateCurseUI();">ゲームを始める</button>
             <button class="btn" onclick="showScreen('upgrade-screen'); updateUpgradeUI();">自分の強化</button>
             <button class="btn" onclick="showScreen('encyclopedia-screen'); initEncyclopedia('eq');">関数の図鑑</button>
         </div>
@@ -138,7 +137,22 @@
                     <button class="btn" style="width: 100%; margin: 0; background: #4a90e2; color: #fff; border-color: #357abd;" onclick="startGame('ineq')">出撃する</button>
                 </div>
             </div>
-            <button class="btn back-btn" onclick="showScreen('title-screen')">タイトルへ戻る</button>
+            
+            <div class="curse-container">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #503030;">💀 呪いレベル (0〜100)</div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <button class="btn" style="width: 45px; padding: 5px; margin: 0;" onclick="changeCurse(-10)">-10</button>
+                    <button class="btn" style="width: 45px; padding: 5px; margin: 0;" onclick="changeCurse(-1)">-1</button>
+                    <span id="curse-display" style="font-size: 26px; font-weight: bold; width: 60px; text-align: center; color: #a03030;">0</span>
+                    <button class="btn" style="width: 45px; padding: 5px; margin: 0;" onclick="changeCurse(1)">+1</button>
+                    <button class="btn" style="width: 45px; padding: 5px; margin: 0;" onclick="changeCurse(10)">+10</button>
+                </div>
+                <div style="font-size: 13px; color: #666; margin-top: 10px;">
+                    敵の体力・出現速度・獲得XPが <span id="curse-effect-display" style="font-weight:bold; color:#a03030;">0</span>% 増加します
+                </div>
+            </div>
+
+            <button class="btn back-btn" style="margin-top: 0;" onclick="showScreen('title-screen')">タイトルへ戻る</button>
         </div>
     </div>
 
@@ -167,7 +181,7 @@
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="game-ui">
             <div style="font-size: 13px; font-weight: bold; color: #333; margin-bottom: 5px;">
-                Lv:<span id="lv-val">1</span> | Time:<span id="time-val">0:00</span> | <span id="type-val"></span>
+                Lv:<span id="lv-val">1</span> | Time:<span id="time-val">0:00</span> | <span id="type-val"></span> | 💀<span id="curse-val">0</span>
             </div>
             <div class="bar-container"><div id="hp-bar" style="width: 100%;"></div></div>
             <div class="bar-container"><div id="xp-bar" style="width: 0%;"></div></div>
@@ -215,13 +229,14 @@
         window.addEventListener('touchmove', e => updatePointer(e.touches[0].clientX, e.touches[0].clientY), {passive: true});
         window.addEventListener('touchstart', e => updatePointer(e.touches[0].clientX, e.touches[0].clientY), {passive: true});
 
-        let globalData = { xp: 0, upgrades: { hp: 0, atk: 0, spd: 0, reroll: 0 } };
+        let globalData = { xp: 0, curse: 0, upgrades: { hp: 0, atk: 0, spd: 0, reroll: 0 } };
         function loadData() { 
             try { 
                 const saved = localStorage.getItem('satsuriku-data'); 
                 if (saved) {
                     let parsed = JSON.parse(saved);
                     globalData.xp = parsed.xp || 0;
+                    globalData.curse = parsed.curse || 0;
                     if(parsed.upgrades) {
                         globalData.upgrades.hp = parsed.upgrades.hp || 0;
                         globalData.upgrades.atk = parsed.upgrades.atk || 0;
@@ -237,6 +252,17 @@
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(el => el.classList.remove('active-screen'));
             document.getElementById(screenId).classList.add('active-screen');
+        }
+
+        // --- 呪い（やりこみ）システムのUI関数 ---
+        function changeCurse(amt) {
+            globalData.curse = Math.max(0, Math.min(100, (globalData.curse || 0) + amt));
+            saveData();
+            updateCurseUI();
+        }
+        function updateCurseUI() {
+            document.getElementById('curse-display').innerText = globalData.curse || 0;
+            document.getElementById('curse-effect-display').innerText = globalData.curse || 0;
         }
 
         let gameState = {};
@@ -325,6 +351,13 @@
             if (globalData.xp >= cost) { globalData.xp -= cost; globalData.upgrades[id] = (globalData.upgrades[id] || 0) + 1; saveData(); updateUpgradeUI(); }
         }
 
+        // --- 呪いレベルに応じたスポーンレートの計算 ---
+        function getSpawnRate(lv, curse) {
+            let baseRate = Math.max(10, 60 - Math.floor(lv * 1.5));
+            // 呪い1につき出現速度(頻度)が1%増加 = フレーム間隔は短くなる
+            return Math.max(2, Math.floor(baseRate / (1 + curse * 0.01)));
+        }
+
         function startGame(charType) {
             document.getElementById('game-over-modal').style.display = 'none';
             document.getElementById('level-up-modal').style.display = 'none';
@@ -333,13 +366,20 @@
             const atk = 1.0 + ((globalData.upgrades.atk || 0) * 0.1);
             const spd = Math.max(3, 12 - (globalData.upgrades.spd || 0));
             const rrl = 3 + (globalData.upgrades.reroll || 0);
+            const curse = globalData.curse || 0;
+
             gameState = {
-                charType, player: { hp, maxHp: hp, x: 400, y: 300, size: 26, lv: 1, xp: 0, nextXp: 5, damage: atk, attackInterval: spd, lineWidth: 3, invincible: 0, durationBonus: 0 },
+                charType, 
+                player: { hp, maxHp: hp, x: 400, y: 300, size: 26, lv: 1, xp: 0, nextXp: 5, damage: atk, attackInterval: spd, lineWidth: 3, invincible: 0, durationBonus: 0 },
                 enemies: [], effects: [], ineqEffects: [], enemyEffects: [],
                 formulas: charType === 'eq' ? [ { id: 1, name: "スロット1", components: [ { name: "Circle", shortName: "Circle", code: "CIRCLE" } ], variables: [] } ] : [ { id: 1, name: "領域1", components: [], variables: [] } ],
-                frameCount: 0, spawnRate: 60, isPaused: false, isGameOver: false, rerollsLeft: rrl, currentUpgrades: null
+                frameCount: 0, spawnRate: getSpawnRate(1, curse), isPaused: false, isGameOver: false, rerollsLeft: rrl, currentUpgrades: null,
+                curseLevel: curse
             };
+            
             document.getElementById('type-val').innerText = charType === 'eq' ? "等号" : "不等号";
+            document.getElementById('curse-val').innerText = curse;
+            
             if (animationId) cancelAnimationFrame(animationId);
             lastFrameTime = performance.now();
             animationId = requestAnimationFrame(gameLoop);
@@ -355,7 +395,10 @@
                 this.y = gameState.player.y + Math.sin(angle) * dist;
                 this.hitFlash = 0; this.fragile = 0; this.ineqCooldown = {}; this.isBoss = false;
                 this.typeIdx = typeIdx; this.n = typeIdx + 3; 
-                this.maxHp = 1 + this.typeIdx * 2; this.hp = this.maxHp;
+                // 呪いレベルによるHP強化
+                let curseMult = 1 + (gameState.curseLevel * 0.01);
+                this.maxHp = Math.floor((1 + this.typeIdx * 2) * curseMult); 
+                this.hp = this.maxHp;
                 this.speed = 1.0 + this.typeIdx * 0.1 + (gameState.player.lv * 0.05);
                 this.size = 12 + this.typeIdx * 1.5; this.xp = 1 + this.typeIdx; 
                 this.color = `hsl(0, ${Math.min(80, 40 + typeIdx*5)}%, ${Math.max(30, 70 - typeIdx*5)}%)`;
@@ -384,7 +427,13 @@
             constructor(bossType, lv) {
                 super(0); this.isBoss = true; this.bossType = bossType; 
                 this.n = bossType === 'mid' ? 8 : 12; this.size = bossType === 'mid' ? 35 : 50; this.color = bossType === 'mid' ? '#c48' : '#822'; 
-                this.maxHp = bossType === 'mid' ? 1000 + lv * 10 : 2500 + lv * 20; this.hp = this.maxHp;
+                
+                // 呪いレベルによるHP強化
+                let curseMult = 1 + (gameState.curseLevel * 0.01);
+                let baseBossHp = bossType === 'mid' ? 1000 + lv * 10 : 2500 + lv * 20;
+                this.maxHp = Math.floor(baseBossHp * curseMult); 
+                this.hp = this.maxHp;
+                
                 this.speed = 1.0 + (lv * 0.02); this.xp = bossType === 'mid' ? 300 : 0; 
                 this.formulas = bossType === 'mid' ? ['ROSE', 'SIN'] : ['CIRCLE', 'PARABOLA'];
                 this.state = 'APPROACH'; this.attackDelay = 0; this.timer = 0;
@@ -396,7 +445,15 @@
                     this.x += ((gameState.player.x-this.x)/d)*this.speed; this.y += ((gameState.player.y-this.y)/d)*this.speed;
                     if (d < 150) { this.state = 'ATTACK'; this.attackDelay = 30; }
                 } else {
-                    if (--this.attackDelay <= 0) { this.bossAttack(); this.x = Math.random()*800; this.y = Math.random()*600; this.state = 'APPROACH'; }
+                    if (--this.attackDelay <= 0) { 
+                        this.bossAttack(); 
+                        let safeWarp = false;
+                        while(!safeWarp) {
+                            this.x = Math.random()*800; this.y = Math.random()*600; 
+                            if (Math.hypot(gameState.player.x-this.x, gameState.player.y-this.y) > 200) safeWarp = true;
+                        }
+                        this.state = 'APPROACH'; 
+                    }
                 }
                 if (this.bossType === 'last' && ++this.timer >= 300) {
                     this.timer = 0; this.formulas = [Math.random() > 0.5 ? 'CIRCLE' : 'ROSE', 'SIN', 'PARABOLA'].sort(() => 0.5 - Math.random()).slice(0, 2);
@@ -462,7 +519,6 @@
             });
         }
 
-        // --- 不等号領域計算のバグ修正版 ---
         function evalIneq(x, comps, T) {
             let y = 0;
             for (let c of comps) {
@@ -470,11 +526,10 @@
                 if (c.code === 'SIN_AREA') y += Math.sin(x/20 + T/10)*30;
                 else if (c.code === 'PARA_AREA') y += (x*x)/200;
                 else if (c.code === 'NOISE_AREA') { let n=Math.sin(x*12.9898+T*0.1)*43758.5; y+=(n-Math.floor(n)-0.5)*50; }
-                else if (c.code === 'STEP_AREA') y += Math.floor((x+T*2)/60)*30; // 階段のスケール調整
+                else if (c.code === 'STEP_AREA') y += Math.floor((x+T*2)/60)*30; 
                 else if (c.code === 'TAN_AREA') { let tv=Math.tan(x/40+T/10)*40; y+=Math.min(600,Math.max(-600,tv)); }
                 else try { y += new Function('x','T','return '+c.code)(x,T); } catch(e){}
             }
-            // 極端な座標飛びを防止するためのクランプ
             return Math.min(1000, Math.max(-1000, y));
         }
 
@@ -514,14 +569,21 @@
         }
 
         function damagePlayer(amt) { if (gameState.player.invincible > 0) return; gameState.player.hp -= amt; gameState.player.invincible = 45; }
+        
         function triggerGameOver() { endG("GAME OVER", "#d66", 1); }
         function triggerGameClear() { endG("GAME CLEAR!", "#da6", 2); }
         function endG(t, c, m) {
-            gameState.isGameOver = true; const s = Math.floor(gameState.frameCount / 60);
-            const xp = (s + gameState.player.lv * 5) * m; globalData.xp += xp; saveData();
+            gameState.isGameOver = true; 
+            const s = Math.floor(gameState.frameCount / 60);
+            
+            // 呪いレベルによるXPボーナス適用
+            const curseBonus = 1 + (gameState.curseLevel * 0.01);
+            const xp = Math.floor((s + gameState.player.lv * 5) * m * curseBonus); 
+            
+            globalData.xp += xp; saveData();
             document.getElementById('modal-title-go').innerText = t; document.getElementById('modal-title-go').style.color = c;
             document.getElementById('result-stats').innerHTML = `生存時間: <b>${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}</b><br>到達レベル: <b>Lv.${gameState.player.lv}</b>`;
-            document.getElementById('result-xp').innerText = `+${xp}${m>1?' (CLEAR BONUS x2!)':''}`;
+            document.getElementById('result-xp').innerText = `+${xp}${m>1?' (CLEAR BONUS x2!)':''}${gameState.curseLevel>0?` (CURSE BONUS +${gameState.curseLevel}%)`:''}`;
             document.getElementById('game-over-modal').style.display = 'block';
         }
 
@@ -536,6 +598,7 @@
             gameState.frameCount++; if (gameState.player.invincible > 0) gameState.player.invincible--;
             if (gameState.frameCount === 18000) gameState.enemies.push(new BossEnemy('mid', gameState.player.lv));
             if (gameState.frameCount === 36000) gameState.enemies.push(new BossEnemy('last', gameState.player.lv));
+            
             if (gameState.frameCount % gameState.spawnRate === 0) {
                 const m = Math.floor(gameState.frameCount/3600), p = (gameState.frameCount%3600)/3600;
                 let w = m === 0 ? [{t:0,w:1}] : (m===1?[{t:0,w:1},{t:1,w:p}]:[{t:m-2,w:1-p},{t:m-1,w:1},{t:m,w:p}]);
@@ -617,12 +680,16 @@
             document.getElementById('hp-bar').style.width = (gameState.player.hp/gameState.player.maxHp*100) + "%";
             document.getElementById('xp-bar').style.width = (gameState.player.xp/gameState.player.nextXp*100) + "%";
             document.getElementById('lv-val').innerText = gameState.player.lv;
+            
+            // プレイ中に呪いレベルに応じたスポーンレートの更新（レベルアップ等で変化するbaseRateに対して）
+            gameState.spawnRate = getSpawnRate(gameState.player.lv, gameState.curseLevel);
+            
             document.getElementById('stats-list').innerText = `HP:${gameState.player.hp}/${gameState.player.maxHp} | ATK:${gameState.player.damage.toFixed(1)} | SPD:${(60/gameState.player.attackInterval).toFixed(1)}/s`;
             document.getElementById('formula-list').innerHTML = gameState.formulas.map(f => `[${f.name}] 📍:${f.variables[0]?.name||'自分'}<br> └:${f.components.map(c=>c.name).join('+')||'なし'}`).join('<br>');
             if (gameState.player.hp <= 0) triggerGameOver();
         }
 
-        window.startGame = startGame; window.showScreen = showScreen; window.updateUpgradeUI = updateUpgradeUI; window.buyUpgrade = buyUpgrade; window.returnToTitle = returnToTitle; window.initEncyclopedia = initEncyclopedia;
+        window.startGame = startGame; window.showScreen = showScreen; window.updateUpgradeUI = updateUpgradeUI; window.buyUpgrade = buyUpgrade; window.returnToTitle = returnToTitle; window.initEncyclopedia = initEncyclopedia; window.changeCurse = changeCurse; window.updateCurseUI = updateCurseUI;
     </script>
 </body>
 </html>
