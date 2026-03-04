@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>殺戮関数 - 完全版</title>
+    <title>殺戮関数</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
@@ -12,92 +12,53 @@
             overflow: hidden; display: flex; justify-content: center; align-items: center; 
             height: 100vh; width: 100vw; touch-action: manipulation;
         }
-        .screen { display: none; width: 100%; height: 100%; position: relative; overflow-y: auto; padding: 20px; }
+        .screen { display: none; width: 100%; height: 100%; position: relative; padding: 20px; overflow-y: auto; }
         .active-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
         canvas { 
-            background: #f4f2e8; border: 2px solid #888; 
-            box-shadow: 5px 5px 15px rgba(0,0,0,0.1); 
-            max-width: 100vw; max-height: 100vh; 
-            object-fit: contain; 
+            background: #f4f2e8; border: 2px solid #888; box-shadow: 5px 5px 15px rgba(0,0,0,0.1); 
+            max-width: 100vw; max-height: 100vh; object-fit: contain; 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
         }
         
         .menu-container {
-            width: 100%; max-width: 750px; min-height: 100%;
-            background: #f4f2e8; border: 2px solid #888; box-shadow: 5px 5px 15px rgba(0,0,0,0.1); 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            padding: 20px; margin: auto; border-radius: 8px;
+            width: 100%; max-width: 750px; background: #f4f2e8; border: 2px solid #888; 
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.1); border-radius: 8px;
+            display: flex; flex-direction: column; align-items: center; padding: 20px; margin: auto;
         }
         
-        h1.title-logo { 
-            font-size: clamp(32px, 10vw, 64px); 
-            margin: 0 0 30px 0; color: #333; border-bottom: 4px dashed #888; 
-            padding-bottom: 10px; letter-spacing: 5px; text-align: center;
-        }
-        h2 { color: #333; border-bottom: 2px dashed #888; padding-bottom: 10px; width: 100%; text-align: center; font-size: clamp(20px, 6vw, 24px); margin-top: 0;}
+        h1.title-logo { font-size: clamp(32px, 10vw, 64px); margin: 0 0 20px 0; border-bottom: 4px dashed #888; padding-bottom: 10px; letter-spacing: 5px; text-align: center; }
+        h2 { border-bottom: 2px dashed #888; padding-bottom: 10px; width: 100%; text-align: center; font-size: clamp(20px, 6vw, 24px); margin-top: 0;}
         
-        .btn {
-            display: block; width: 100%; max-width: 300px; padding: 15px; margin: 10px 0; 
-            background: #f0eee4; border: 2px solid #888; color: #333; cursor: pointer; 
-            text-align: center; font-size: 16px; font-weight: bold; transition: all 0.1s;
-            border-radius: 4px; appearance: none;
-        }
-        @media (hover: hover) {
-            .btn:hover:not(:disabled) { background: #e0dec4; border-color: #333; }
-            .option-btn:hover { background: #e0dec4; }
-        }
+        .btn { display: block; width: 100%; max-width: 300px; padding: 15px; margin: 10px 0; background: #f0eee4; border: 2px solid #888; color: #333; cursor: pointer; text-align: center; font-size: 16px; font-weight: bold; border-radius: 4px; appearance: none; }
+        @media (hover: hover) { .btn:hover:not(:disabled) { background: #e0dec4; border-color: #333; } .option-btn:hover { background: #e0dec4; } }
         .btn:active:not(:disabled), .option-btn:active { background: #d0ceb4; transform: scale(0.98); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .back-btn { margin-top: 20px; background: #ddd; }
-
-        /* キャラクターカード */
-        .char-select-container { display: flex; gap: 20px; width: 100%; justify-content: center; flex-wrap: wrap; margin-bottom: 15px;}
-        .char-card {
-            flex: 1; min-width: 280px; padding: 20px; border-radius: 8px; text-align: left;
-            display: flex; flex-direction: column; transition: transform 0.2s;
-        }
+        
+        .char-select-container { display: flex; gap: 15px; width: 100%; justify-content: center; flex-wrap: wrap; margin-bottom: 15px;}
+        .char-card { flex: 1; min-width: 250px; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; }
         .char-card.eq { background: #fffdf5; border: 2px solid #ccc; }
         .char-card.ineq { background: #f0f8ff; border: 2px solid #a0c8e0; }
-        .char-card h3 { text-align: center; margin-top: 0; font-size: 22px; }
-        .char-card p { font-size: 13px; line-height: 1.6; flex-grow: 1; margin: 10px 0 20px 0; }
-        .char-card .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; margin-bottom: 10px; width: 100%; text-align: center;}
+        .char-card h3 { text-align: center; margin: 0; font-size: 22px; }
+        .char-card p { font-size: 13px; line-height: 1.5; flex-grow: 1; margin: 10px 0; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; margin-bottom: 5px; text-align: center; width: 100%; }
 
-        /* 呪いUI */
-        .curse-container {
-            margin-bottom: 20px; background: #f0eee4; padding: 15px; border: 2px solid #888; border-radius: 8px; width: 100%; max-width: 580px; text-align: center;
-        }
-
-        /* ゲーム内UI */
-        #game-ui { 
-            position: absolute; top: 10px; left: 10px; pointer-events: none; 
-            width: calc(100% - 20px); max-width: 350px; z-index: 10;
-            background: rgba(244, 242, 232, 0.9); 
-            padding: 8px; border-radius: 8px; border: 1px solid rgba(136, 136, 136, 0.5);
-            max-height: 40vh; display: flex; flex-direction: column;
-        }
+        .curse-container { background: #f0eee4; padding: 10px; border: 2px solid #888; border-radius: 8px; width: 100%; text-align: center; margin-bottom: 10px; }
+        
+        #game-ui { position: absolute; top: 10px; left: 10px; pointer-events: none; width: calc(100% - 20px); max-width: 320px; z-index: 10; background: rgba(244, 242, 232, 0.9); padding: 8px; border-radius: 8px; border: 1px solid rgba(136,136,136,0.5); max-height: 40vh; display: flex; flex-direction: column; }
         #ui-scroll-area { overflow-y: auto; pointer-events: auto; flex-grow: 1; margin-top: 5px; }
-        .bar-container { width: 100%; height: 8px; background: #ddd; margin-bottom: 4px; border: 1px solid #888; flex-shrink: 0; }
+        .bar-container { width: 100%; height: 6px; background: #ddd; margin-bottom: 4px; border: 1px solid #888; }
         #hp-bar { height: 100%; background: #d66060; transition: width 0.2s; } 
         #xp-bar { height: 100%; background: #60d6a0; transition: width 0.2s; } 
 
-        /* リスト表示 */
-        .list-container { width: 100%; flex-grow: 1; max-height: 50vh; overflow-y: auto; text-align: left; padding: 10px; border: 1px solid #ccc; background: #fffdf5; }
-        .list-item { border-bottom: 1px dashed #ccc; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .list-container { width: 100%; flex-grow: 1; max-height: 40vh; overflow-y: auto; padding: 10px; border: 1px solid #ccc; background: #fffdf5; }
+        .list-item { border-bottom: 1px dashed #ccc; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
         
-        .type-badge { display: inline-block; padding: 3px 6px; background: #90a0d0; color: #fff; font-size: 10px; margin-right: 8px; border-radius: 2px; font-weight: bold; }
-        .type-badge.stat { background: #d0a060; }
-        .type-badge.target { background: #80c090; }
-        .type-badge.target-mod { background: #e09040; }
+        .type-badge { display: inline-block; padding: 2px 5px; background: #90a0d0; color: #fff; font-size: 10px; margin-right: 5px; border-radius: 2px; font-weight: bold; }
+        .type-badge.stat { background: #d0a060; } .type-badge.target { background: #80c090; } .type-badge.target-mod { background: #e09040; } .type-badge.base { background: #50a0a0; }
         
-        #level-up-modal, #game-over-modal { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            background: #fcfaf2; padding: 20px; border: 3px solid #666; display: none; text-align: center; 
-            pointer-events: auto; width: 95%; max-width: 420px; max-height: 90vh; overflow-y: auto; z-index: 100;
-            border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        .option-btn { display: block; width: 100%; padding: 12px; margin: 10px 0; background: #f0eee4; border: 2px solid #888; color: #333; cursor: pointer; text-align: left; border-radius: 4px; }
-        #reroll-btn { background: #4a90e2; color: #fff; font-weight: bold; border-color: #357abd; }
+        #level-up-modal, #game-over-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fcfaf2; padding: 20px; border: 3px solid #666; display: none; text-align: center; pointer-events: auto; width: 95%; max-width: 400px; max-height: 90vh; overflow-y: auto; z-index: 100; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .option-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; background: #f0eee4; border: 2px solid #888; color: #333; cursor: pointer; text-align: left; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -106,46 +67,45 @@
         <div class="menu-container">
             <h1 class="title-logo">殺戮関数</h1>
             <button class="btn" onclick="showScreen('char-select-screen')">ゲームを始める</button>
-            <button class="btn" onclick="showScreen('upgrade-screen'); updateUpgradeUI();">自分の強化</button>
-            <button class="btn" onclick="showScreen('encyclopedia-screen'); initEncyclopedia('eq');">関数の図鑑</button>
+            <button class="btn" onclick="showScreen('upgrade-screen'); updateUI();">自分の強化</button>
+            <button class="btn" onclick="showScreen('encyclopedia-screen'); initDict('eq');">関数の図鑑</button>
         </div>
     </div>
 
     <div id="char-select-screen" class="screen">
         <div class="menu-container">
-            <h2>キャラクター選択</h2>
+            <h2>出撃設定</h2>
             <div class="char-select-container">
                 <div class="char-card eq">
-                    <h3><span style="font-size: 28px;">＝</span> 等号キャラ</h3>
-                    <div class="badge" style="background:#e0e0e0">軌道描画・単体火力</div>
-                    <p>数式の「線」を描画して攻撃します。一撃が重く、幾何学的な弾幕で敵を切り裂くのが得意です。</p>
-                    <button class="btn" style="width:100%; margin:0;" onclick="startGame('eq')">出撃する</button>
+                    <h3><span style="font-size:24px;">＝</span> 等号キャラ</h3>
+                    <div class="badge" style="background:#e0e0e0; color:#333;">軌道描画・単体火力</div>
+                    <p>数式の「線」を描画して攻撃します。一撃が重く、幾何学的な弾幕で敵を切り裂きます。</p>
+                    <button class="btn" style="width:100%; margin:0;" onclick="startGame('eq')">出撃</button>
                 </div>
                 <div class="char-card ineq">
-                    <h3 style="color:#285e8e;"><span style="font-size: 28px;">＜</span> 不等号キャラ</h3>
+                    <h3 style="color:#285e8e;"><span style="font-size:24px;">＜</span> 不等号キャラ</h3>
                     <div class="badge" style="background:#cce0ff; color:#285e8e;">領域展開・持続制圧</div>
-                    <p>数式の「面」を塗りつぶして攻撃します。広範囲にダメージゾーンを作り、敵をじわじわと消滅させます。</p>
-                    <button class="btn" style="width:100%; margin:0; background:#4a90e2; color:#fff; border-color:#357abd;" onclick="startGame('ineq')">出撃する</button>
+                    <p>数式の「面」で攻撃します。広範囲にダメージゾーンを作り、敵をじわじわと消滅させます。</p>
+                    <button class="btn" style="width:100%; margin:0; background:#4a90e2; color:#fff; border-color:#357abd;" onclick="startGame('ineq')">出撃</button>
                 </div>
             </div>
-            
             <div class="curse-container">
-                <div style="font-weight: bold; margin-bottom: 10px; color: #503030;">💀 呪いレベル (0〜100)</div>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                    <button class="btn" style="width: 50px; padding: 10px; margin: 0;" onclick="changeCurse(-10)">-10</button>
-                    <span id="curse-display" style="font-size: 24px; font-weight: bold; width: 50px;">0</span>
-                    <button class="btn" style="width: 50px; padding: 10px; margin: 0;" onclick="changeCurse(10)">+10</button>
+                <div style="font-weight:bold; color:#503030;">💀 呪いレベル (0〜100)</div>
+                <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin:5px 0;">
+                    <button class="btn" style="width:40px; padding:8px; margin:0;" onclick="changeCurse(-10)">-10</button>
+                    <span id="curse-disp" style="font-size:24px; font-weight:bold; width:50px;">0</span>
+                    <button class="btn" style="width:40px; padding:8px; margin:0;" onclick="changeCurse(10)">+10</button>
                 </div>
-                <div style="font-size: 11px; color: #666; margin-top: 8px;">難易度と獲得XPがレベル分だけ上昇します</div>
+                <div style="font-size:11px; color:#666;">敵の強さと獲得XPが <span id="curse-eff">0</span>% 増加</div>
             </div>
-            <button class="btn back-btn" onclick="showScreen('title-screen')">戻る</button>
+            <button class="btn back-btn" style="margin-top:0;" onclick="showScreen('title-screen')">戻る</button>
         </div>
     </div>
 
     <div id="upgrade-screen" class="screen">
         <div class="menu-container">
             <h2>永続強化</h2>
-            <div style="font-weight:bold; color:#8a6d50; margin-bottom:10px;">所持XP: <span id="global-xp-val">0</span></div>
+            <div style="font-weight:bold; color:#8a6d50; margin-bottom:10px;">所持XP: <span id="g-xp-val">0</span></div>
             <div class="list-container" id="upgrade-list"></div>
             <button class="btn back-btn" onclick="showScreen('title-screen')">戻る</button>
         </div>
@@ -155,8 +115,8 @@
         <div class="menu-container">
             <h2>数式図鑑</h2>
             <div style="display:flex; gap:10px; width:100%; margin-bottom:10px;">
-                <button class="btn" style="margin:0" onclick="initEncyclopedia('eq')">等号</button>
-                <button class="btn" style="margin:0" onclick="initEncyclopedia('ineq')">不等号</button>
+                <button class="btn" style="margin:0; padding:10px;" onclick="initDict('eq')">等号</button>
+                <button class="btn" style="margin:0; padding:10px; background:#e0f0ff;" onclick="initDict('ineq')">不等号</button>
             </div>
             <div class="list-container" id="dict-list"></div>
             <button class="btn back-btn" onclick="showScreen('title-screen')">戻る</button>
@@ -166,7 +126,9 @@
     <div id="game-screen" class="screen" style="padding:0; overflow:hidden;">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="game-ui">
-            <div style="font-size:12px; font-weight:bold;">Lv:<span id="lv-val">1</span> | <span id="time-val">0:00</span> | 💀<span id="curse-val">0</span></div>
+            <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">
+                Lv:<span id="lv-val">1</span> | <span id="time-val">0:00</span> | 💀<span id="curse-val">0</span>
+            </div>
             <div class="bar-container"><div id="hp-bar" style="width:100%"></div></div>
             <div class="bar-container"><div id="xp-bar" style="width:0%"></div></div>
             <div id="ui-scroll-area">
@@ -176,16 +138,15 @@
         </div>
 
         <div id="level-up-modal">
-            <h2 id="modal-title">LEVEL UP!</h2>
+            <h2 id="modal-title" style="margin-top:0;">LEVEL UP!</h2>
             <div id="options"></div>
-            <button id="reroll-btn" class="option-btn">リロール</button>
-            <button id="remove-btn" class="option-btn" style="background:#d88; display:none;">要素を削除する</button>
+            <button id="reroll-btn" class="option-btn" style="background:#4a90e2; color:#fff; font-weight:bold; border-color:#357abd;">リロール</button>
         </div>
 
         <div id="game-over-modal">
-            <h2 id="go-title">GAME OVER</h2>
-            <p id="result-stats" style="font-size:14px;"></p>
-            <button class="btn" style="margin:20px auto;" onclick="returnToTitle()">タイトルへ</button>
+            <h2 id="go-title" style="color:#d66; border:none;">GAME OVER</h2>
+            <p id="result-stats" style="font-size:14px; line-height:1.8;"></p>
+            <button class="btn" style="margin:20px auto 0;" onclick="returnToTitle()">タイトルへ</button>
         </div>
     </div>
 
@@ -194,157 +155,140 @@
         const ctx = canvas.getContext('2d');
         let animationId, lastFrameTime = 0, pointerCoords = { x: 400, y: 300 };
 
+        // 座標取得 (スマホ対応)
         function updatePointer(e) {
             const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            pointerCoords.x = (clientX - rect.left) * (800 / rect.width);
-            pointerCoords.y = (clientY - rect.top) * (600 / rect.height);
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            pointerCoords.x = (cx - rect.left) * (800 / rect.width);
+            pointerCoords.y = (cy - rect.top) * (600 / rect.height);
         }
         window.addEventListener('mousemove', updatePointer);
-        window.addEventListener('touchstart', updatePointer, {passive:false});
-        window.addEventListener('touchmove', updatePointer, {passive:false});
+        window.addEventListener('touchstart', updatePointer, {passive: false});
+        window.addEventListener('touchmove', updatePointer, {passive: false});
 
-        let globalData = { xp: 0, curse: 0, upgrades: { hp: 0, atk: 0, spd: 0, reroll: 0 } };
-        function loadData() { 
-            const saved = localStorage.getItem('satsuriku-v2');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                globalData.xp = parsed.xp || 0;
-                globalData.curse = parsed.curse || 0;
-                if (parsed.upgrades) Object.assign(globalData.upgrades, parsed.upgrades);
-            }
-        }
-        function saveData() { localStorage.setItem('satsuriku-v2', JSON.stringify(globalData)); }
+        // データ管理
+        let gData = { xp: 0, curse: 0, upg: { hp: 0, atk: 0, spd: 0, reroll: 0 } };
+        function loadData() { try { const s = localStorage.getItem('satsuriku-v3'); if (s) { const p = JSON.parse(s); gData.xp = p.xp||0; gData.curse = p.curse||0; Object.assign(gData.upg, p.upg||{}); } } catch(e) {} }
+        function saveData() { localStorage.setItem('satsuriku-v3', JSON.stringify(gData)); }
         loadData();
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active-screen', s.id === id));
-        }
+        // 画面遷移 & UI更新
+        function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active-screen', s.id === id)); }
+        function changeCurse(v) { gData.curse = Math.max(0, Math.min(100, gData.curse + v)); saveData(); document.getElementById('curse-disp').innerText = gData.curse; document.getElementById('curse-eff').innerText = gData.curse; }
+        changeCurse(0);
 
-        function changeCurse(v) { globalData.curse = Math.max(0, Math.min(100, globalData.curse + v)); updateCurseUI(); saveData(); }
-        function updateCurseUI() { document.getElementById('curse-display').innerText = globalData.curse; }
-        updateCurseUI();
-
-        // 報酬データ
         const upEq = [
-            { type: "variable", name: "最寄りの敵 (CLO)", code: "CLO", desc: "一番近い敵を狙う" },
-            { type: "variable", name: "ランダム (RAN)", code: "RAN", desc: "ランダムな敵を狙う" },
-            { type: "variable", name: "ポインタ (PTR)", code: "PTR", desc: "指の位置を狙う" },
-            { type: "target_mod", name: "射出 (Launch)", code: "LAUNCH", desc: "攻撃を自分から飛ばす" },
-            { type: "formula", name: "円 (Circle)", code: "CIRCLE", desc: "基本形状を円にする" },
-            { type: "formula", name: "バラ (Rose)", code: "ROSE", desc: "幾何学的な花びら型" },
-            { type: "formula", name: "波 (Sine)", code: "Math.sin(x/20)*40", desc: "波状の動きを加える" },
-            { type: "modifier", name: "積分 (∫)", code: "INT", desc: "威力とサイズを大幅UP" },
-            { type: "modifier", name: "虚数 (i)", code: "IMG", desc: "弱体化させる影を出す" },
-            { type: "stat", name: "威力増加", code: "ATK_UP", action: () => gameState.player.damage += 0.2 }
-        ];
-
-        const upIneq = [
-            { type: "variable", name: "最寄りの敵 (CLO)", code: "CLO" },
-            { type: "variable", name: "ポインタ (PTR)", code: "PTR" },
+            { type: "variable", name: "最寄りの敵 (CLO)", code: "CLO" }, { type: "variable", name: "ランダム (RAN)", code: "RAN" },
+            { type: "variable", name: "敵の重心 (AVG)", code: "AVG" }, { type: "variable", name: "ポインタ (PTR)", code: "PTR" },
             { type: "target_mod", name: "射出 (Launch)", code: "LAUNCH" },
-            { type: "base", name: "円形領域", code: "BASE_CIRCLE", desc: "周囲を塗りつぶす" },
-            { type: "formula", name: "Sine 波面", code: "SIN_AREA", desc: "境界が波打つ" },
-            { type: "formula", name: "Step 階段", code: "STEP_AREA", desc: "境界がカクつく" },
-            { type: "modifier", name: "持続化 (Persist)", code: "PERSIST", desc: "領域が長く残る" },
-            { type: "modifier", name: "帯域化 (Band)", code: "BAND", desc: "境界のみを強化" },
-            { type: "stat", name: "威力増加", code: "ATK_UP", action: () => gameState.player.damage += 0.1 }
+            { type: "formula", name: "円 (Circle)", code: "CIRCLE" }, { type: "formula", name: "バラ (Rose)", code: "ROSE" },
+            { type: "formula", name: "波 (sin)", code: "Math.sin(x/20)*40" }, { type: "formula", name: "絶対値波 (|sin|)", code: "Math.abs(Math.sin(x/30))*50" },
+            { type: "formula", name: "放物線 (x²)", code: "(x*x)/200" }, { type: "formula", name: "Tangent (tan)", code: "TAN" },
+            { type: "modifier", name: "反転 (d/dx)", code: "INVERT" }, { type: "modifier", name: "積分 (∫)", code: "INT" },
+            { type: "modifier", name: "極限 (lim)", code: "LIM" }, { type: "modifier", name: "虚数 (i)", code: "IMG" }, { type: "modifier", name: "総和 (Σ)", code: "SIGMA" },
+            { type: "stat", name: "威力増加", action: () => gameState.p.dmg += 0.2 }, { type: "stat", name: "描画速度UP", action: () => gameState.p.spd = Math.max(3, gameState.p.spd - 2) }, { type: "stat", name: "太さUP", action: () => gameState.p.lw += 2 }
+        ];
+        const upIneq = [
+            { type: "variable", name: "最寄りの敵 (CLO)", code: "CLO" }, { type: "variable", name: "ポインタ (PTR)", code: "PTR" }, { type: "target_mod", name: "射出 (Launch)", code: "LAUNCH" },
+            { type: "base", name: "下部領域", code: "BASE_LESS" }, { type: "base", name: "円形領域", code: "BASE_CIRCLE" },
+            { type: "formula", name: "Sine 波面", code: "SIN_AREA" }, { type: "formula", name: "Noise 浸食", code: "NOISE_AREA" }, { type: "formula", name: "Step 階段", code: "STEP_AREA" },
+            { type: "modifier", name: "NOT (反転)", code: "INVERT_INEQ" }, { type: "modifier", name: "帯域化 (Band)", code: "BAND_INEQ" }, { type: "modifier", name: "持続化 (Persist)", code: "PERSIST" },
+            { type: "stat", name: "威力増加", action: () => gameState.p.dmg += 0.1 }, { type: "stat", name: "展開速度UP", action: () => gameState.p.spd = Math.max(5, gameState.p.spd - 2) }, { type: "stat", name: "持続時間UP", action: () => gameState.p.dur += 15 }
         ];
 
-        function initEncyclopedia(t) {
+        function initDict(t) {
             const l = document.getElementById('dict-list'); l.innerHTML = '';
-            (t === 'eq' ? upEq : upIneq).forEach(u => {
-                if(u.type==='stat') return;
-                l.innerHTML += `<div class="list-item"><div><span class="type-badge">${u.type}</span><b>${u.name}</b></div><small>${u.desc||''}</small></div>`;
-            });
+            (t === 'eq' ? upEq : upIneq).forEach(u => { if(u.type!=='stat') l.innerHTML += `<div class="list-item"><div><span class="type-badge ${u.type}">${u.type}</span><b>${u.name}</b></div></div>`; });
         }
 
-        function updateUpgradeUI() {
-            document.getElementById('global-xp-val').innerText = globalData.xp;
+        const pUpgs = [{id:'hp',n:'HP(+5)',b:10},{id:'atk',n:'ATK(+0.1)',b:15},{id:'spd',n:'SPD(-1F)',b:20},{id:'reroll',n:'REROLL',b:20}];
+        function updateUI() {
+            document.getElementById('g-xp-val').innerText = gData.xp;
             const l = document.getElementById('upgrade-list'); l.innerHTML = '';
-            const items = [{id:'hp',n:'最大HP'},{id:'atk',n:'攻撃力'},{id:'spd',n:'速度'},{id:'reroll',n:'リロール'}];
-            items.forEach(i => {
-                const lv = globalData.upgrades[i.id] || 0, cost = (lv + 1) * 15;
-                l.innerHTML += `<div class="list-item"><div><b>${i.n}</b> (Lv.${lv})</div><button class="btn" style="width:auto;padding:5px 15px;" ${globalData.xp>=cost?'':'disabled'} onclick="buyUp('${i.id}',${cost})">${cost}XP</button></div>`;
+            pUpgs.forEach(i => {
+                const lv = gData.upg[i.id] || 0, c = i.b * (lv + 1);
+                l.innerHTML += `<div class="list-item"><div><b>${i.n}</b> (Lv.${lv})</div><button class="btn" style="width:auto;padding:6px 12px;margin:0;" ${gData.xp>=c?'':'disabled'} onclick="buyUp('${i.id}',${c})">${c}XP</button></div>`;
             });
         }
-        function buyUp(id, c) { globalData.xp -= c; globalData.upgrades[id]++; saveData(); updateUpgradeUI(); }
+        function buyUp(id, c) { gData.xp -= c; gData.upg[id] = (gData.upg[id]||0)+1; saveData(); updateUI(); }
 
+        let gameState = {};
+
+        // ゲーム開始
         function startGame(type) {
-            showScreen('game-screen');
-            const pU = globalData.upgrades;
+            loadData(); showScreen('game-screen');
+            const u = gData.upg;
             gameState = {
-                charType: type,
-                player: { hp: 35 + pU.hp*5, maxHp: 35 + pU.hp*5, x: 400, y: 300, lv: 1, xp: 0, nextXp: 5, damage: 1.0 + pU.atk*0.1, attackInterval: Math.max(3, 12-pU.spd), lineWidth: 3, invincible: 0, durationBonus: 0 },
-                enemies: [], effects: [], ineqEffects: [], enemyEffects: [],
-                formulas: [{id:1, name: "スロット1", components: type==='eq'?[{name:"Circle",code:"CIRCLE"}]:[], variables: []}],
-                frameCount: 0, rerollsLeft: 3 + pU.reroll, curse: globalData.curse, isPaused: false, isGameOver: false
+                type, frame: 0, pause: false, over: false, rrl: 3 + (u.reroll||0), curse: gData.curse||0,
+                p: { hp: 35+(u.hp||0)*5, maxHp: 35+(u.hp||0)*5, x: 400, y: 300, lv: 1, xp: 0, nx: 5, dmg: 1.0+(u.atk||0)*0.1, spd: Math.max(3, 12-(u.spd||0)), lw: 3, inv: 0, dur: 0 },
+                ens: [], efs: [], ineqs: [], bEfs: [],
+                forms: [{ id:1, n: type==='eq'?"スロット1":"領域1", c: type==='eq'?[{name:"Circle",code:"CIRCLE"}]:[], v: [] }]
             };
             document.getElementById('curse-val').innerText = gameState.curse;
             lastFrameTime = performance.now();
             animationId = requestAnimationFrame(gameLoop);
         }
 
-        function returnToTitle() { cancelAnimationFrame(animationId); showScreen('title-screen'); }
-
+        // エンティティクラス (安全な死亡フラグ方式)
         class Enemy {
             constructor(idx) {
                 const a = Math.random()*Math.PI*2;
-                this.x = gameState.player.x + Math.cos(a)*550; this.y = gameState.player.y + Math.sin(a)*550;
-                this.idx = idx; this.n = idx+3; this.isBoss = false; this.hitFlash = 0; this.ineqCD = {};
-                const m = 1 + gameState.curse*0.01;
-                this.maxHp = (1 + idx*2) * m; this.hp = this.maxHp;
-                this.speed = 1.0 + idx*0.1 + gameState.player.lv*0.05; this.size = 12 + idx*1.5; this.xp = 1 + idx;
+                this.x = 400 + Math.cos(a)*550; this.y = 300 + Math.sin(a)*550;
+                this.dead = false; this.isBoss = false; this.hitF = 0; this.cd = {}; this.n = idx+3;
+                this.maxHp = Math.floor((1+idx*2)*(1+gameState.curse*0.01)); this.hp = this.maxHp;
+                this.spd = 1.0 + idx*0.1 + gameState.p.lv*0.05; this.sz = 12 + idx*1.5; this.xp = 1 + idx;
+                this.col = `hsl(0, ${Math.min(80, 40+idx*5)}%, ${Math.max(30, 70-idx*5)}%)`;
             }
             update() {
-                const d = Math.hypot(gameState.player.x-this.x, gameState.player.y-this.y);
-                if(d>1){ this.x += (gameState.player.x-this.x)/d*this.speed; this.y += (gameState.player.y-this.y)/d*this.speed; }
-                for(let k in this.ineqCD) if(this.ineqCD[k]>0) this.ineqCD[k]--;
+                const d = Math.hypot(gameState.p.x-this.x, gameState.p.y-this.y);
+                if(d>1){ this.x+=(gameState.p.x-this.x)/d*this.spd; this.y+=(gameState.p.y-this.y)/d*this.spd; }
+                for(let k in this.cd) if(this.cd[k]>0) this.cd[k]--;
             }
             draw() {
-                ctx.fillStyle = this.hitFlash>0 ? "#fff" : `hsl(0, ${Math.min(80, 40+this.idx*5)}%, ${Math.max(30, 70-this.idx*5)}%)`;
-                ctx.beginPath();
-                for(let i=0; i<this.n; i++){ let a = -Math.PI/2+(Math.PI*2*i)/this.n; ctx.lineTo(this.x+Math.cos(a)*this.size, this.y+Math.sin(a)*this.size); }
+                ctx.fillStyle = this.hitF>0 ? "#fff" : this.col; ctx.beginPath();
+                for(let i=0; i<this.n; i++){ let a=-Math.PI/2+(Math.PI*2*i)/this.n; ctx.lineTo(this.x+Math.cos(a)*this.sz, this.y+Math.sin(a)*this.sz); }
                 ctx.closePath(); ctx.fill(); ctx.strokeStyle="#844"; ctx.lineWidth=2; ctx.stroke();
-                if(this.hitFlash>0) this.hitFlash--;
+                if(this.maxHp>1){ ctx.fillStyle="#844"; ctx.fillRect(this.x-12,this.y-this.sz-10,24,4); ctx.fillStyle="#f33"; ctx.fillRect(this.x-12,this.y-this.sz-10,24*(this.hp/this.maxHp),4); }
+                if(this.hitF>0) this.hitF--;
             }
         }
 
         class Boss extends Enemy {
             constructor(type, lv) {
-                super(0); this.isBoss = true; this.bossType = type;
-                this.n = type==='mid'?8:12; this.size = type==='mid'?35:50;
-                const m = 1 + gameState.curse*0.01;
-                this.maxHp = (type==='mid'?1000:2500)*m + lv*10; this.hp = this.maxHp;
-                this.state = 'MOVE'; this.timer = 0;
+                super(0); this.isBoss=true; this.bType=type; this.n=type==='mid'?8:12; this.sz=type==='mid'?35:50;
+                this.maxHp = Math.floor((type==='mid'?1000:2500)*(1+gameState.curse*0.01) + lv*15); this.hp=this.maxHp;
+                this.state = 'MOVE'; this.tmr = 0; this.xp = type==='mid'?300:0;
             }
             update() {
                 super.update();
-                if(this.state==='MOVE') {
-                    if(Math.hypot(this.x-gameState.player.x, this.y-gameState.player.y)<150) { this.state='ATTACK'; this.timer=30; }
-                } else {
-                    if(--this.timer<=0) { this.bossFire(); this.x = Math.random()*800; this.y=Math.random()*600; this.state='MOVE'; }
+                if(this.state==='MOVE') { if(Math.hypot(this.x-gameState.p.x, this.y-gameState.p.y)<150) { this.state='ATK'; this.tmr=30; } } 
+                else {
+                    if(--this.tmr<=0) {
+                        const pts=[]; for(let t=-400;t<=400;t+=4){ let a=(t+400)*(Math.PI*2/800), r=this.bType==='mid'?Math.cos(4*a)*150:150; pts.push({x:this.x+r*Math.cos(a), y:this.y+r*Math.sin(a)+Math.sin(t/20)*30}); }
+                        gameState.bEfs.push({pts, life:30, dead:false});
+                        this.x = Math.random()*800; this.y = Math.random()*600; this.state='MOVE';
+                    }
                 }
             }
-            bossFire() {
-                const pts = [];
-                for(let t=-400; t<=400; t+=5) {
-                    let a = (t+400)*(Math.PI*2/800);
-                    let r = this.bossType==='mid' ? Math.cos(4*a)*150 : 150;
-                    pts.push({x: this.x + r*Math.cos(a), y: this.y + r*Math.sin(a) + Math.sin(t/20)*30});
-                }
-                gameState.enemyEffects.push({points:pts, life:30, hasHit:false});
-            }
+            draw() { if(this.state==='ATK'){ctx.beginPath();ctx.arc(this.x,this.y,this.sz*1.5,0,Math.PI*2);ctx.fillStyle="rgba(255,100,100,0.3)";ctx.fill();} super.draw(); }
         }
 
-        function gameLoop(ts) {
-            if(gameState.isGameOver) return;
-            animationId = requestAnimationFrame(gameLoop);
-            if(gameState.isPaused || ts-lastFrameTime<16) return;
-            lastFrameTime = ts;
-            ctx.clearRect(0,0,800,600); gameState.frameCount++;
+        function getTarget(c) {
+            let trgs = gameState.ens.filter(e=>!e.dead);
+            if(!trgs.length) return null;
+            if(c==='CLO') return trgs.reduce((p,c)=>Math.hypot(p.x-gameState.p.x,p.y-gameState.p.y)<Math.hypot(c.x-gameState.p.x,c.y-gameState.p.y)?p:c);
+            if(c==='RAN') return trgs[Math.floor(Math.random()*trgs.length)];
+            if(c==='AVG') { let sx=0,sy=0; trgs.forEach(e=>{sx+=e.x;sy+=e.y;}); return {x:sx/trgs.length, y:sy/trgs.length}; }
+            return null;
+        }
 
-            // 敵出現
-            const sr = Math.max(2, Math.floor((60 - gameState.player.lv) / (1 + gameState.curse*0.01)));
-            if(gameState.frameCount % sr === 0) gameState.enemies.push(new Enemy(Math.min(5, Math.floor(gameState.fra
+        // メインループ
+        function gameLoop(ts) {
+            if(gameState.over) return; animationId = requestAnimationFrame(gameLoop);
+            if(gameState.pause || ts-lastFrameTime<16) return; lastFrameTime = ts;
+            ctx.clearRect(0,0,800,600); gameState.frame++;
+            
+            // 敵スポーン
+            let rate = Math.max(2, Math.floor(Math.max(10, 60-gameState.p.lv*1.5)/(1+gameState.curse*0.01)));
+            if(gameState.frame 
