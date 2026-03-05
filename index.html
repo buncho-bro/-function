@@ -6,11 +6,12 @@
     <title>殺戮関数</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        /* touch-action: none でスマホ特有のスクロールやズームを完全防止し、負荷を下げる */
         body { 
             margin: 0; background: #e8e6da; color: #333; 
             font-family: 'Courier New', Courier, monospace; 
             overflow: hidden; display: flex; justify-content: center; align-items: center; 
-            height: 100vh; width: 100vw; touch-action: manipulation;
+            height: 100vh; width: 100vw; touch-action: none;
         }
         .screen { display: none; width: 100%; height: 100%; position: relative; padding: 20px; overflow-y: auto; }
         .active-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -19,6 +20,7 @@
             background: #f4f2e8; border: 2px solid #888; box-shadow: 5px 5px 15px rgba(0,0,0,0.1); 
             max-width: 100vw; max-height: 100vh; object-fit: contain; 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            touch-action: none;
         }
         
         .menu-container {
@@ -155,26 +157,29 @@
         const ctx = canvas.getContext('2d');
         let animationId, lastFrameTime = 0, pointerCoords = { x: 400, y: 300 };
 
-        // 座標取得 (スマホ対応)
+        // 画面サイズの事前キャッシュ（スマホのレイアウト変更時の負荷軽減）
+        let canvasRect = canvas.getBoundingClientRect();
+        window.addEventListener('resize', () => canvasRect = canvas.getBoundingClientRect());
+
         function updatePointer(e) {
-            const rect = canvas.getBoundingClientRect();
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
             const cy = e.touches ? e.touches[0].clientY : e.clientY;
-            pointerCoords.x = (cx - rect.left) * (800 / rect.width);
-            pointerCoords.y = (cy - rect.top) * (600 / rect.height);
+            pointerCoords.x = (cx - canvasRect.left) * (800 / canvasRect.width);
+            pointerCoords.y = (cy - canvasRect.top) * (600 / canvasRect.height);
         }
         window.addEventListener('mousemove', updatePointer);
         window.addEventListener('touchstart', updatePointer, {passive: false});
         window.addEventListener('touchmove', updatePointer, {passive: false});
 
-        // データ管理
         let gData = { xp: 0, curse: 0, upg: { hp: 0, atk: 0, spd: 0, reroll: 0 } };
         function loadData() { try { const s = localStorage.getItem('satsuriku-v3'); if (s) { const p = JSON.parse(s); gData.xp = p.xp||0; gData.curse = p.curse||0; Object.assign(gData.upg, p.upg||{}); } } catch(e) {} }
         function saveData() { localStorage.setItem('satsuriku-v3', JSON.stringify(gData)); }
         loadData();
 
-        // 画面遷移 & UI更新
-        function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active-screen', s.id === id)); }
+        function showScreen(id) { 
+            document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active-screen', s.id === id)); 
+            if(id === 'game-screen') setTimeout(() => canvasRect = canvas.getBoundingClientRect(), 100);
+        }
         function changeCurse(v) { gData.curse = Math.max(0, Math.min(100, gData.curse + v)); saveData(); document.getElementById('curse-disp').innerText = gData.curse; document.getElementById('curse-eff').innerText = gData.curse; }
         changeCurse(0);
 
@@ -215,7 +220,6 @@
 
         let gameState = {};
 
-        // ゲーム開始
         function startGame(type) {
             loadData(); showScreen('game-screen');
             const u = gData.upg;
@@ -230,7 +234,6 @@
             animationId = requestAnimationFrame(gameLoop);
         }
 
-        // エンティティクラス (安全な死亡フラグ方式)
         class Enemy {
             constructor(idx) {
                 const a = Math.random()*Math.PI*2;
@@ -283,28 +286,23 @@
             return null;
         }
 
-        // メインループ
         function gameLoop(ts) {
             if(gameState.over) return; animationId = requestAnimationFrame(gameLoop);
-            if(gameState.pause || ts-lastFrameTime<16) return; lastFrameTime = ts;
+            // 60Hzデバイスで16msにするとコマ落ちするため15msで調整 (120Hz対応)
+            if(gameState.pause || ts-lastFrameTime<15) return; lastFrameTime = ts;
             ctx.clearRect(0,0,800,600); gameState.frame++;
             
-            // 敵スポーン
             let rate = Math.max(2, Math.floor(Math.max(10, 60-gameState.p.lv*1.5)/(1+gameState.curse*0.01)));
             if(gameState.frame % rate === 0) gameState.ens.push(new Enemy(Math.min(5, Math.floor(gameState.frame/3600))));
             if(gameState.frame === 18000) gameState.ens.push(new Boss('mid', gameState.p.lv));
             if(gameState.frame === 36000) gameState.ens.push(new Boss('last', gameState.p.lv));
 
-            // 自機攻撃生成
             processAttacks();
 
-            // 更新と描画
             gameState.ens.forEach(e => { e.update(); e.draw(); });
 
-            // エフェクト処理 (安全なフラグ処理)
             handleIneqs(); handleEqs(); handleBossEfs();
 
-            // 接触ダメージ
             gameState.ens.forEach(e => {
                 if(!e.dead && Math.hypot(e.x-gameState.p.x, e.y-gameState.p.y) < e.sz+12) {
                     if(gameState.p.inv<=0) { gameState.p.hp--; gameState.p.inv=45; }
@@ -312,7 +310,6 @@
                 }
             });
 
-            // 死亡要素のクリーンアップ (完全安定)
             gameState.ens = gameState.ens.filter(e => !e.dead);
             gameState.efs = gameState.efs.filter(e => !e.dead);
             gameState.ineqs = gameState.ineqs.filter(e => !e.dead);
@@ -337,14 +334,22 @@
 
                 if(gameState.type==='eq') {
                     let pts=[], isC=f.c.some(c=>c.code==='CIRCLE'), rC=f.c.filter(c=>c.code==='ROSE').length;
+                    
+                    // 【スマホ負荷対策】ループ外で関数をコンパイル
+                    let compiledFns = [];
+                    for(let c of f.c) {
+                        if(['CIRCLE','ROSE','INVERT','TAN','INT','LIM','IMG','SIGMA','LAUNCH'].includes(c.code)) continue;
+                        try { compiledFns.push(new Function('x','T','return '+c.code)); } catch(e){}
+                    }
+
                     for(let x=-400; x<=400; x+=4){
                         let lx=x, ly=0;
                         if(rC>0){ let a=(x+400)*(Math.PI*2/800), r=Math.cos((2+rC*2)*a)*100; lx=r*Math.cos(a); ly=r*Math.sin(a); }
                         else if(isC){ let a=(x+400)*(Math.PI*2/800); lx=Math.cos(a)*80; ly=Math.sin(a)*80; }
-                        for(let c of f.c) {
-                            if(['CIRCLE','ROSE','INVERT','TAN','INT','LIM','IMG','SIGMA','LAUNCH'].includes(c.code)) continue;
-                            try { ly += new Function('x','T','return '+c.code)(lx,T); }catch(e){}
-                        }
+                        
+                        // コンパイル済みの関数を実行（スマホ爆速化）
+                        for(let fn of compiledFns) { try { ly += fn(lx, T); } catch(e){} }
+                        
                         if(f.c.some(c=>c.code==='TAN')){ let tv=Math.tan(x/20)*40; lx+=Math.max(-800,Math.min(800,tv)); }
                         if(f.c.length%2 && f.c.some(c=>c.code==='INVERT')) ly=-ly;
                         pts.push({lx, ly:-ly});
@@ -374,7 +379,6 @@
             });
         }
 
-        // ダメージとキル処理 (フラグ付与)
         function dealDamage(e, d) {
             e.hp -= d; e.hitF = 3;
             if(e.hp <= 0 && !e.dead) {
@@ -410,7 +414,7 @@
 
                 gameState.ens.forEach(e => {
                     if(!e.dead && !e.cd[ef.id]) {
-                        if(Math.hypot(e.x-cx, e.y-cy) < 150) { // 簡易判定(軽量化のため円形基準)
+                        if(Math.hypot(e.x-cx, e.y-cy) < 150) { 
                             dealDamage(e, ef.dmg); e.cd[ef.id]=10;
                         }
                     }
@@ -459,9 +463,9 @@
         }
 
         function showSlotSelect(i) {
-            const o = document.getElementById('options'); o.innerHTML = '追加先を選択:';
+            const o = document.getElementById('options'); o.innerHTML = '<div style="margin-bottom:10px;font-weight:bold;">追加先を選択:</div>';
             gameState.forms.forEach(f => {
-                const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<b>${f.n}</b><br><small>現在: ${f.c.length}要素</small>`;
+                const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<b>${f.n}</b> (現在: ${f.c.length}要素)`;
                 b.onclick = () => { if(i.type==='variable') f.v=[i]; else f.c.push(i); closeModal(); }; o.appendChild(b);
             });
             document.getElementById('reroll-btn').style.display='none';
@@ -471,13 +475,13 @@
         function endGame(w) {
             gameState.over = true; document.getElementById('game-over-modal').style.display='block';
             const s = Math.floor(gameState.frame/60), x = Math.floor((s + gameState.p.lv*5)*(w?2:1)*(1+gameState.curse*0.01));
-            gData.xp += x; saveData();
+            gData.xp += x; saveData(); updateUpgradeUI();
             document.getElementById('go-title').innerText = w ? "GAME CLEAR!" : "GAME OVER";
             document.getElementById('go-title').style.color = w ? "#da6" : "#d66";
             document.getElementById('result-stats').innerHTML = `生存: ${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}<br>到達: Lv.${gameState.p.lv}<br><br><b>獲得XP: +${x}</b>`;
         }
 
-        window.startGame=startGame; window.showScreen=showScreen; window.updateUI=updateUpgradeUI; window.buyUp=buyUp; window.returnToTitle=returnToTitle; window.initDict=initEncyclopedia; window.changeCurse=changeCurse;
+        window.returnToTitle = returnToTitle;
     </script>
 </body>
 </html>
