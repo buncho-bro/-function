@@ -6,7 +6,6 @@
     <title>殺戮関数</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        /* touch-action: none でスマホ特有のスクロールやズームを完全防止し、負荷を下げる */
         body { 
             margin: 0; background: #e8e6da; color: #333; 
             font-family: 'Courier New', Courier, monospace; 
@@ -143,6 +142,7 @@
             <h2 id="modal-title" style="margin-top:0;">LEVEL UP!</h2>
             <div id="options"></div>
             <button id="reroll-btn" class="option-btn" style="background:#4a90e2; color:#fff; font-weight:bold; border-color:#357abd;">リロール</button>
+            <button id="remove-btn" class="option-btn" style="background:#d88; color:#fff; font-weight:bold; border-color:#a55; display:none;">要素を削除する</button>
         </div>
 
         <div id="game-over-modal">
@@ -156,8 +156,6 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         let animationId, lastFrameTime = 0, pointerCoords = { x: 400, y: 300 };
-
-        // 画面サイズの事前キャッシュ（スマホのレイアウト変更時の負荷軽減）
         let canvasRect = canvas.getBoundingClientRect();
         window.addEventListener('resize', () => canvasRect = canvas.getBoundingClientRect());
 
@@ -238,7 +236,7 @@
             constructor(idx) {
                 const a = Math.random()*Math.PI*2;
                 this.x = 400 + Math.cos(a)*550; this.y = 300 + Math.sin(a)*550;
-                this.dead = false; this.isBoss = false; this.hitF = 0; this.cd = {}; this.n = idx+3;
+                this.dead = false; this.isBoss = false; this.hitF = 0; this.cd = {}; this.n = idx+3; this.fragile = 0;
                 this.maxHp = Math.floor((1+idx*2)*(1+gameState.curse*0.01)); this.hp = this.maxHp;
                 this.spd = 1.0 + idx*0.1 + gameState.p.lv*0.05; this.sz = 12 + idx*1.5; this.xp = 1 + idx;
                 this.col = `hsl(0, ${Math.min(80, 40+idx*5)}%, ${Math.max(30, 70-idx*5)}%)`;
@@ -252,6 +250,7 @@
                 ctx.fillStyle = this.hitF>0 ? "#fff" : this.col; ctx.beginPath();
                 for(let i=0; i<this.n; i++){ let a=-Math.PI/2+(Math.PI*2*i)/this.n; ctx.lineTo(this.x+Math.cos(a)*this.sz, this.y+Math.sin(a)*this.sz); }
                 ctx.closePath(); ctx.fill(); ctx.strokeStyle="#844"; ctx.lineWidth=2; ctx.stroke();
+                if(this.fragile>0){ ctx.save(); ctx.strokeStyle="rgba(180,100,200,0.8)"; ctx.beginPath(); ctx.arc(this.x,this.y,this.sz+4,0,Math.PI*2); ctx.stroke(); ctx.restore(); this.fragile--; }
                 if(this.maxHp>1){ ctx.fillStyle="#844"; ctx.fillRect(this.x-12,this.y-this.sz-10,24,4); ctx.fillStyle="#f33"; ctx.fillRect(this.x-12,this.y-this.sz-10,24*(this.hp/this.maxHp),4); }
                 if(this.hitF>0) this.hitF--;
             }
@@ -288,7 +287,6 @@
 
         function gameLoop(ts) {
             if(gameState.over) return; animationId = requestAnimationFrame(gameLoop);
-            // 60Hzデバイスで16msにするとコマ落ちするため15msで調整 (120Hz対応)
             if(gameState.pause || ts-lastFrameTime<15) return; lastFrameTime = ts;
             ctx.clearRect(0,0,800,600); gameState.frame++;
             
@@ -334,28 +332,41 @@
 
                 if(gameState.type==='eq') {
                     let pts=[], isC=f.c.some(c=>c.code==='CIRCLE'), rC=f.c.filter(c=>c.code==='ROSE').length;
-                    
-                    // 【スマホ負荷対策】ループ外で関数をコンパイル
-                    let compiledFns = [];
+                    let hasLim = f.c.some(c=>c.code==='LIM');
+                    let tRange = 400 + (hasLim?400:0);
+
+                    let cFns = [];
                     for(let c of f.c) {
                         if(['CIRCLE','ROSE','INVERT','TAN','INT','LIM','IMG','SIGMA','LAUNCH'].includes(c.code)) continue;
-                        try { compiledFns.push(new Function('x','T','return '+c.code)); } catch(e){}
+                        try { cFns.push(new Function('x','T','return '+c.code)); } catch(e){}
                     }
 
-                    for(let x=-400; x<=400; x+=4){
+                    for(let x=-tRange; x<=tRange; x+=5){
                         let lx=x, ly=0;
-                        if(rC>0){ let a=(x+400)*(Math.PI*2/800), r=Math.cos((2+rC*2)*a)*100; lx=r*Math.cos(a); ly=r*Math.sin(a); }
-                        else if(isC){ let a=(x+400)*(Math.PI*2/800); lx=Math.cos(a)*80; ly=Math.sin(a)*80; }
+                        if(rC>0){ let a=(x+tRange)*(Math.PI*2/800), r=Math.cos((2+rC*2)*a)*100; lx=r*Math.cos(a); ly=r*Math.sin(a); }
+                        else if(isC){ let a=(x+tRange)*(Math.PI*2/800); lx=Math.cos(a)*80; ly=Math.sin(a)*80; }
                         
-                        // コンパイル済みの関数を実行（スマホ爆速化）
-                        for(let fn of compiledFns) { try { ly += fn(lx, T); } catch(e){} }
-                        
+                        for(let fn of cFns) { try { ly += fn(lx, T); } catch(e){} }
                         if(f.c.some(c=>c.code==='TAN')){ let tv=Math.tan(x/20)*40; lx+=Math.max(-800,Math.min(800,tv)); }
-                        if(f.c.length%2 && f.c.some(c=>c.code==='INVERT')) ly=-ly;
+                        if(f.c.filter(c=>c.code==='INVERT').length%2) ly=-ly;
                         pts.push({lx, ly:-ly});
                     }
-                    let mLife=12+iC*4;
-                    gameState.efs.push({pts, life:mLife, max:mLife, lw:p.lw+iC*5, st, ed, hV, dmg:p.dmg*(1+iC*0.5), hit:new Set(), dead:false});
+                    
+                    let sigC = f.c.filter(c=>c.code==='SIGMA').length, imgC = f.c.some(c=>c.code==='IMG');
+                    let sets = [{p:pts, isS:false}];
+                    for(let s=1; s<=sigC; s++) {
+                        sets.push({p:pts.map(pt=>({lx:pt.lx, ly:pt.ly-30*s})), isS:false});
+                        sets.push({p:pts.map(pt=>({lx:pt.lx, ly:pt.ly+30*s})), isS:false});
+                    }
+                    if(imgC) {
+                        let shSets = sets.map(s => ({p:s.p.map(pt=>({lx:pt.lx+20, ly:pt.ly+20})), isS:true}));
+                        sets = sets.concat(shSets);
+                    }
+
+                    let mLife=12+iC*4, dmg=p.dmg*(1+iC*0.5), lw=p.lw+iC*5;
+                    sets.forEach(set => {
+                        gameState.efs.push({pts:set.p, life:mLife, max:mLife, lw, st, ed, hV, hasLim, dmg, hit:new Set(), isS:set.isS, dead:false});
+                    });
                 } else {
                     let pts=[], bs=f.c.some(c=>c.code==='BASE_CIRCLE')?'CIRCLE':'GREATER';
                     if(bs==='CIRCLE'){
@@ -391,13 +402,29 @@
         function handleEqs() {
             gameState.efs.forEach(ef => {
                 let prg = ef.hV ? 1-(ef.life/ef.max) : 1, cx=ef.st.x+(ef.ed.x-ef.st.x)*prg, cy=ef.st.y+(ef.ed.y-ef.st.y)*prg;
-                let wP = ef.pts.map(p=>({x:p.lx+cx, y:p.ly+cy}));
-                ctx.strokeStyle=`rgba(60,60,60,${ef.life/ef.max})`; ctx.lineWidth=ef.lw; ctx.beginPath();
-                wP.forEach((p,j)=>j===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
+                let wP = ef.pts.map(p => {
+                    let wx=p.lx+cx, wy=p.ly+cy;
+                    if(ef.hasLim){ wx=((wx%800)+800)%800; wy=((wy%600)+600)%600; }
+                    return {x:wx, y:wy};
+                });
                 
+                ctx.save();
+                if(ef.isS) { ctx.setLineDash([5,10]); ctx.strokeStyle=`rgba(180,100,200,${ef.life/ef.max})`; }
+                else { ctx.strokeStyle=`rgba(60,60,60,${ef.life/ef.max})`; }
+                ctx.lineWidth=ef.lw; ctx.beginPath();
+                wP.forEach((p,j)=>{
+                    if(j===0) ctx.moveTo(p.x,p.y);
+                    else { if(ef.hasLim && Math.hypot(p.x-wP[j-1].x, p.y-wP[j-1].y)>200) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); }
+                });
+                ctx.stroke(); ctx.restore();
+
                 if(ef.hV || ef.life===ef.max) {
                     gameState.ens.forEach(e => {
-                        if(!e.dead && !ef.hit.has(e) && wP.some(p=>Math.hypot(e.x-p.x,e.y-p.y)<e.sz+ef.lw)){ ef.hit.add(e); dealDamage(e, ef.dmg); }
+                        if(!e.dead && !ef.hit.has(e) && wP.some(p=>Math.hypot(e.x-p.x,e.y-p.y)<e.sz+ef.lw)){ 
+                            ef.hit.add(e); 
+                            if(ef.isS) e.fragile = 120;
+                            else { let d=ef.dmg; if(e.fragile>0){d*=2; e.fragile=0;} dealDamage(e, d); }
+                        }
                     });
                 }
                 if(--ef.life<=0) ef.dead=true;
@@ -407,16 +434,14 @@
         function handleIneqs() {
             gameState.ineqs.forEach(ef => {
                 let prg = ef.hV ? 1-(ef.life/ef.max) : 1, cx=ef.st.x+(ef.ed.x-ef.st.x)*prg, cy=ef.st.y+(ef.ed.y-ef.st.y)*prg;
-                ctx.fillStyle=`rgba(100,160,200,${(ef.life/ef.max)*0.4})`; ctx.beginPath();
+                ctx.fillStyle = `rgba(100,160,220,${(ef.life/ef.max)*0.4})`; ctx.beginPath();
                 ef.pts.forEach((p,j)=>j===0?ctx.moveTo(p.lx+cx,p.ly+cy):ctx.lineTo(p.lx+cx,p.ly+cy));
                 if(ef.bs!=='CIRCLE'){ ctx.lineTo(ef.pts[ef.pts.length-1].lx+cx, 1600); ctx.lineTo(ef.pts[0].lx+cx, 1600); }
                 ctx.fill();
 
                 gameState.ens.forEach(e => {
                     if(!e.dead && !e.cd[ef.id]) {
-                        if(Math.hypot(e.x-cx, e.y-cy) < 150) { 
-                            dealDamage(e, ef.dmg); e.cd[ef.id]=10;
-                        }
+                        if(Math.hypot(e.x-cx, e.y-cy) < 150) { dealDamage(e, ef.dmg); e.cd[ef.id]=10; }
                     }
                 });
                 if(--ef.life<=0) ef.dead=true;
@@ -427,14 +452,14 @@
             gameState.bEfs.forEach(ef => {
                 ctx.strokeStyle=`rgba(200,50,50,${ef.life/30})`; ctx.lineWidth=4; ctx.beginPath();
                 ef.pts.forEach((p,j)=>j===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
-                if(!ef.hasHit && ef.pts.some(p=>Math.hypot(p.x-gameState.p.x, p.y-gameState.p.y)<15)) { gameState.p.hp-=5; ef.hasHit=true; }
+                if(!ef.hasHit && ef.pts.some(p=>Math.hypot(p.x-gameState.p.x, p.y-gameState.p.y)<15)){ gameState.p.hp-=5; ef.hasHit=true; }
                 if(--ef.life<=0) ef.dead=true;
             });
         }
 
         function updateHUD() {
-            document.getElementById('hp-bar').style.width = (gameState.p.hp/gameState.p.maxHp*100)+'%';
-            document.getElementById('xp-bar').style.width = (gameState.p.xp/gameState.p.nx*100)+'%';
+            document.getElementById('hp-bar').style.width = Math.min(100, (gameState.p.hp/gameState.p.maxHp*100))+'%';
+            document.getElementById('xp-bar').style.width = Math.min(100, (gameState.p.xp/gameState.p.nx*100))+'%';
             document.getElementById('lv-val').innerText = gameState.p.lv;
             let s = Math.floor(gameState.frame/60); document.getElementById('time-val').innerText = `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
             document.getElementById('stats-list').innerText = `HP:${gameState.p.hp}/${gameState.p.maxHp} | ATK:${gameState.p.dmg.toFixed(1)} | SPD:${(60/gameState.p.spd).toFixed(1)}/s`;
@@ -442,24 +467,34 @@
         }
 
         function levelUp() {
-            gameState.pause = true; document.getElementById('level-up-modal').style.display='block';
-            if(gameState.p.lv%10===0) gameState.forms.push({id:gameState.forms.length+1, n:gameState.type==='eq'?"スロット":"領域", c:[], v:[]});
+            gameState.pause = true; 
+            if(gameState.p.lv%10===0) gameState.forms.push({id:gameState.forms.length+1, n:gameState.type==='eq'?"スロット"+(gameState.forms.length+1):"領域"+(gameState.forms.length+1), c:[], v:[]});
             rollOptions();
+            
+            const m = document.getElementById('level-up-modal');
+            const d = document.getElementById('remove-btn');
+            if(gameState.forms.some(f => f.c.length>0 || f.v.length>0)) {
+                d.style.display = 'block'; d.onclick = showRemoveSelect;
+            } else { d.style.display = 'none'; }
+            m.style.display='block';
         }
 
         function rollOptions() {
             const o = document.getElementById('options'); o.innerHTML = '';
             const p = gameState.type==='eq'?upEq:upIneq;
             p.sort(()=>0.5-Math.random()).slice(0,3).forEach(c => {
-                const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<b>${c.name}</b><br><small>${c.desc||''}</small>`;
+                const b = document.createElement('button'); b.className='option-btn';
+                b.innerHTML = `<b>${c.name}</b><br><small>${c.desc||''}</small>`;
                 b.onclick = () => {
-                    if(c.type==='stat') c.action(); else if(gameState.forms.length>1) { showSlotSelect(c); return; }
+                    if(c.type==='stat') c.action();
+                    else if(gameState.forms.length>1) { showSlotSelect(c); return; }
                     else { if(c.type==='variable') gameState.forms[0].v=[c]; else gameState.forms[0].c.push(c); }
                     closeModal();
-                }; o.appendChild(b);
+                };
+                o.appendChild(b);
             });
             const r = document.getElementById('reroll-btn'); r.style.display='block'; r.innerText=`リロール (残${gameState.rrl})`;
-            r.onclick = () => { if(gameState.rrl>0){gameState.rrl--; rollOptions();} };
+            r.onclick = () => { if(gameState.rrl>0){ gameState.rrl--; rollOptions(); } };
         }
 
         function showSlotSelect(i) {
@@ -468,14 +503,33 @@
                 const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<b>${f.n}</b> (現在: ${f.c.length}要素)`;
                 b.onclick = () => { if(i.type==='variable') f.v=[i]; else f.c.push(i); closeModal(); }; o.appendChild(b);
             });
-            document.getElementById('reroll-btn').style.display='none';
+            document.getElementById('reroll-btn').style.display='none'; document.getElementById('remove-btn').style.display='none';
         }
+
+        function showRemoveSelect() {
+            const o = document.getElementById('options'); o.innerHTML = '<div style="margin-bottom:10px;font-weight:bold;">削除する要素を選択:</div>';
+            document.getElementById('reroll-btn').style.display='none'; document.getElementById('remove-btn').style.display='none';
+            gameState.forms.forEach(f => {
+                f.v.forEach((v, idx) => {
+                    const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<span class="type-badge target">TARGET</span> <b>${v.name}</b>`;
+                    b.onclick = () => { f.v.splice(idx,1); closeModal(); }; o.appendChild(b);
+                });
+                f.c.forEach((c, idx) => {
+                    const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<span class="type-badge formula">FORMULA</span> <b>${c.name}</b>`;
+                    b.onclick = () => { f.c.splice(idx,1); closeModal(); }; o.appendChild(b);
+                });
+            });
+            const cb = document.createElement('button'); cb.className='option-btn'; cb.innerText='キャンセル'; cb.style.background='#ddd';
+            cb.onclick = () => { rollOptions(); document.getElementById('remove-btn').style.display='block'; };
+            o.appendChild(cb);
+        }
+
         function closeModal() { document.getElementById('level-up-modal').style.display='none'; gameState.pause=false; lastFrameTime=performance.now(); }
 
         function endGame(w) {
             gameState.over = true; document.getElementById('game-over-modal').style.display='block';
             const s = Math.floor(gameState.frame/60), x = Math.floor((s + gameState.p.lv*5)*(w?2:1)*(1+gameState.curse*0.01));
-            gData.xp += x; saveData(); updateUpgradeUI();
+            gData.xp += x; saveData(); updateUI();
             document.getElementById('go-title').innerText = w ? "GAME CLEAR!" : "GAME OVER";
             document.getElementById('go-title').style.color = w ? "#da6" : "#d66";
             document.getElementById('result-stats').innerHTML = `生存: ${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}<br>到達: Lv.${gameState.p.lv}<br><br><b>獲得XP: +${x}</b>`;
