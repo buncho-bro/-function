@@ -23,7 +23,7 @@
         }
         
         .menu-container {
-            width: 100%; max-width: 750px; background: #f4f2e8; border: 2px solid #888; 
+            width: 100%; max-width: 650px; background: #f4f2e8; border: 2px solid #888; 
             box-shadow: 5px 5px 15px rgba(0,0,0,0.1); border-radius: 8px;
             display: flex; flex-direction: column; align-items: center; padding: 20px; margin: auto;
         }
@@ -35,20 +35,18 @@
         @media (hover: hover) { .btn:hover:not(:disabled) { background: #e0dec4; border-color: #333; } .option-btn:hover { background: #e0dec4; } }
         .btn:active:not(:disabled), .option-btn:active { background: #d0ceb4; transform: scale(0.98); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        .char-select-container { display: flex; gap: 15px; width: 100%; justify-content: center; flex-wrap: wrap; margin-bottom: 15px;}
-        .char-card { flex: 1; min-width: 250px; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; }
-        .char-card.eq { background: #fffdf5; border: 2px solid #ccc; }
-        .char-card.ineq { background: #f0f8ff; border: 2px solid #a0c8e0; }
-        .char-card h3 { text-align: center; margin: 0; font-size: 22px; }
-        .char-card p { font-size: 13px; line-height: 1.5; flex-grow: 1; margin: 10px 0; }
-        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; margin-bottom: 5px; text-align: center; width: 100%; }
+        .back-btn { margin-top: 20px; background: #ddd; }
 
-        .curse-container { background: #f0eee4; padding: 10px; border: 2px solid #888; border-radius: 8px; width: 100%; text-align: center; margin-bottom: 10px; }
-        
+        /* キャラ選択と呪い（以前の使いやすいシンプルなUI） */
+        .char-select { display: flex; gap: 15px; margin-bottom: 15px; width: 100%; justify-content: center; flex-wrap: wrap; }
+        .char-select .btn { width: 45%; min-width: 140px; margin: 0; padding: 10px; }
+        .char-select span { font-size: 24px; display: block; margin-bottom: 5px; font-weight: bold; }
+        .curse-container { background: #e8e6da; padding: 10px; border-radius: 8px; width: 100%; max-width: 300px; text-align: center; margin: 10px 0 20px 0; }
+
+        /* ゲーム内UI */
         #game-ui { position: absolute; top: 10px; left: 10px; pointer-events: none; width: calc(100% - 20px); max-width: 320px; z-index: 10; background: rgba(244, 242, 232, 0.9); padding: 8px; border-radius: 8px; border: 1px solid rgba(136,136,136,0.5); max-height: 40vh; display: flex; flex-direction: column; }
         #ui-scroll-area { overflow-y: auto; pointer-events: auto; flex-grow: 1; margin-top: 5px; }
-        .bar-container { width: 100%; height: 6px; background: #ddd; margin-bottom: 4px; border: 1px solid #888; }
+        .bar-container { width: 100%; height: 6px; background: #ddd; margin-bottom: 4px; border: 1px solid #888; overflow: hidden; }
         #hp-bar { height: 100%; background: #d66060; transition: width 0.2s; } 
         #xp-bar { height: 100%; background: #60d6a0; transition: width 0.2s; } 
 
@@ -67,60 +65,49 @@
     <div id="title-screen" class="screen active-screen">
         <div class="menu-container">
             <h1 class="title-logo">殺戮関数</h1>
-            <button class="btn" onclick="showScreen('char-select-screen')">ゲームを始める</button>
-            <button class="btn" onclick="showScreen('upgrade-screen'); updateUI();">自分の強化</button>
-            <button class="btn" onclick="showScreen('encyclopedia-screen'); initDict('eq');">関数の図鑑</button>
-        </div>
-    </div>
+            
+            <div class="char-select">
+                <button class="btn" onclick="startGame('eq')">
+                    <span style="color:#666">＝</span>等号キャラ<br><small>軌道描画・一撃必殺</small>
+                </button>
+                <button class="btn" onclick="startGame('ineq')">
+                    <span style="color:#4a90e2">＜</span>不等号キャラ<br><small>領域展開・継続ダメージ</small>
+                </button>
+            </div>
 
-    <div id="char-select-screen" class="screen">
-        <div class="menu-container">
-            <h2>出撃設定</h2>
-            <div class="char-select-container">
-                <div class="char-card eq">
-                    <h3><span style="font-size:24px;">＝</span> 等号キャラ</h3>
-                    <div class="badge" style="background:#e0e0e0; color:#333;">軌道描画・単体火力</div>
-                    <p>数式の「線」を描画して攻撃します。一撃が重く、幾何学的な弾幕で敵を切り裂きます。</p>
-                    <button class="btn" style="width:100%; margin:0;" onclick="startGame('eq')">出撃</button>
-                </div>
-                <div class="char-card ineq">
-                    <h3 style="color:#285e8e;"><span style="font-size:24px;">＜</span> 不等号キャラ</h3>
-                    <div class="badge" style="background:#cce0ff; color:#285e8e;">領域展開・持続制圧</div>
-                    <p>数式の「面」で攻撃します。広範囲にダメージゾーンを作り、敵をじわじわと消滅させます。</p>
-                    <button class="btn" style="width:100%; margin:0; background:#4a90e2; color:#fff; border-color:#357abd;" onclick="startGame('ineq')">出撃</button>
-                </div>
-            </div>
             <div class="curse-container">
-                <div style="font-weight:bold; color:#503030;">💀 呪いレベル (0〜100)</div>
-                <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin:5px 0;">
-                    <button class="btn" style="width:40px; padding:8px; margin:0;" onclick="changeCurse(-10)">-10</button>
-                    <span id="curse-disp" style="font-size:24px; font-weight:bold; width:50px;">0</span>
-                    <button class="btn" style="width:40px; padding:8px; margin:0;" onclick="changeCurse(10)">+10</button>
+                <div style="font-weight: bold; color: #503030; font-size: 13px;">💀 呪いレベル: <span id="curse-display" style="font-size: 18px;">0</span></div>
+                <div style="display: flex; justify-content: center; gap: 5px; margin-top: 5px;">
+                    <button class="btn" style="width: 40px; padding: 5px; margin: 0;" onclick="changeCurse(-10)">-10</button>
+                    <button class="btn" style="width: 40px; padding: 5px; margin: 0;" onclick="changeCurse(-1)">-1</button>
+                    <button class="btn" style="width: 40px; padding: 5px; margin: 0;" onclick="changeCurse(1)">+1</button>
+                    <button class="btn" style="width: 40px; padding: 5px; margin: 0;" onclick="changeCurse(10)">+10</button>
                 </div>
-                <div style="font-size:11px; color:#666;">敵の強さと獲得XPが <span id="curse-eff">0</span>% 増加</div>
             </div>
-            <button class="btn back-btn" style="margin-top:0;" onclick="showScreen('title-screen')">戻る</button>
+
+            <button class="btn" onclick="showScreen('upgrade-screen'); updateUpgradeUI();">自分の強化</button>
+            <button class="btn" onclick="showScreen('encyclopedia-screen'); initEncyclopedia('eq');">関数の図鑑</button>
         </div>
     </div>
 
     <div id="upgrade-screen" class="screen">
         <div class="menu-container">
-            <h2>永続強化</h2>
-            <div style="font-weight:bold; color:#8a6d50; margin-bottom:10px;">所持XP: <span id="g-xp-val">0</span></div>
+            <h2>自分の強化</h2>
+            <div style="font-weight:bold; color:#8a6d50; margin-bottom:10px;">所持XP: <span id="global-xp-val">0</span></div>
             <div class="list-container" id="upgrade-list"></div>
-            <button class="btn back-btn" onclick="showScreen('title-screen')">戻る</button>
+            <button class="btn back-btn" onclick="showScreen('title-screen')">タイトルへ戻る</button>
         </div>
     </div>
 
     <div id="encyclopedia-screen" class="screen">
         <div class="menu-container">
-            <h2>数式図鑑</h2>
+            <h2>関数の図鑑</h2>
             <div style="display:flex; gap:10px; width:100%; margin-bottom:10px;">
-                <button class="btn" style="margin:0; padding:10px;" onclick="initDict('eq')">等号</button>
-                <button class="btn" style="margin:0; padding:10px; background:#e0f0ff;" onclick="initDict('ineq')">不等号</button>
+                <button class="btn" style="margin:0; padding:10px;" onclick="initEncyclopedia('eq')">等号 [＝]</button>
+                <button class="btn" style="margin:0; padding:10px; background:#e0f0ff;" onclick="initEncyclopedia('ineq')">不等号 [＜]</button>
             </div>
             <div class="list-container" id="dict-list"></div>
-            <button class="btn back-btn" onclick="showScreen('title-screen')">戻る</button>
+            <button class="btn back-btn" onclick="showScreen('title-screen')">タイトルへ戻る</button>
         </div>
     </div>
 
@@ -142,7 +129,7 @@
             <h2 id="modal-title" style="margin-top:0;">LEVEL UP!</h2>
             <div id="options"></div>
             <button id="reroll-btn" class="option-btn" style="background:#4a90e2; color:#fff; font-weight:bold; border-color:#357abd;">リロール</button>
-            <button id="remove-btn" class="option-btn" style="background:#d88; color:#fff; font-weight:bold; border-color:#a55; display:none;">要素を削除する</button>
+            <button id="remove-btn" class="option-btn" style="background:#d88; color:#fff; font-weight:bold; border-color:#a55; display:none;">⚠️ 既存の要素を削除する</button>
         </div>
 
         <div id="game-over-modal">
@@ -169,339 +156,392 @@
         window.addEventListener('touchstart', updatePointer, {passive: false});
         window.addEventListener('touchmove', updatePointer, {passive: false});
 
-        let gData = { xp: 0, curse: 0, upg: { hp: 0, atk: 0, spd: 0, reroll: 0 } };
-        function loadData() { try { const s = localStorage.getItem('satsuriku-v3'); if (s) { const p = JSON.parse(s); gData.xp = p.xp||0; gData.curse = p.curse||0; Object.assign(gData.upg, p.upg||{}); } } catch(e) {} }
-        function saveData() { localStorage.setItem('satsuriku-v3', JSON.stringify(gData)); }
+        let gData = { xp: 0, curse: 0, upgrades: { hp: 0, atk: 0, spd: 0, reroll: 0 } };
+        function loadData() { try { const s = localStorage.getItem('satsuriku-v4'); if (s) { const p = JSON.parse(s); gData.xp = p.xp||0; gData.curse = p.curse||0; Object.assign(gData.upgrades, p.upgrades||{}); } } catch(e) {} }
+        function saveData() { localStorage.setItem('satsuriku-v4', JSON.stringify(gData)); }
         loadData();
 
         function showScreen(id) { 
             document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active-screen', s.id === id)); 
             if(id === 'game-screen') setTimeout(() => canvasRect = canvas.getBoundingClientRect(), 100);
         }
-        function changeCurse(v) { gData.curse = Math.max(0, Math.min(100, gData.curse + v)); saveData(); document.getElementById('curse-disp').innerText = gData.curse; document.getElementById('curse-eff').innerText = gData.curse; }
+        function changeCurse(v) { gData.curse = Math.max(0, Math.min(100, gData.curse + v)); saveData(); document.getElementById('curse-display').innerText = gData.curse; }
         changeCurse(0);
 
+        // 重いnew Functionを使わず、安全で超高速な数式評価に切り替え
+        function getEqY(code, x, T, rx) {
+            switch(code) {
+                case "SIN": return Math.sin(x/20)*30;
+                case "ABS_SIN": return Math.abs(Math.sin(x/30))*50;
+                case "EXP": return Math.exp(x/100)*10;
+                case "LOG": return Math.log(Math.abs(x/10)+1)*30;
+                case "SIGMOID": return (1/(1+Math.exp(-x/40)))*100 - 50;
+                case "PARABOLA": return (x*x)/200;
+                case "NOISE": return rx * 0.1;
+                default: return 0;
+            }
+        }
+        function getIneqY(code, x, T) {
+            switch(code) {
+                case "SIN_AREA": return Math.sin(x/20 + T/10)*30;
+                case "PARA_AREA": return (x*x)/200;
+                case "STEP_AREA": return Math.floor((x+T*2)/60)*30;
+                case "NOISE_AREA": let n = Math.sin(x*12.9898 + T*0.1) * 43758.5453; return (n - Math.floor(n) - 0.5) * 50;
+                case "TAN_AREA": let tv = Math.tan(x/40 + T/10) * 40; return Math.max(-600, Math.min(600, tv));
+                default: return 0;
+            }
+        }
+
         const upEq = [
-            { type: "variable", name: "最寄りの敵 (CLO)", code: "CLO" }, { type: "variable", name: "ランダム (RAN)", code: "RAN" },
-            { type: "variable", name: "敵の重心 (AVG)", code: "AVG" }, { type: "variable", name: "ポインタ (PTR)", code: "PTR" },
-            { type: "target_mod", name: "射出 (Launch)", code: "LAUNCH" },
-            { type: "formula", name: "円 (Circle)", code: "CIRCLE" }, { type: "formula", name: "バラ (Rose)", code: "ROSE" },
-            { type: "formula", name: "波 (sin)", code: "Math.sin(x/20)*40" }, { type: "formula", name: "絶対値波 (|sin|)", code: "Math.abs(Math.sin(x/30))*50" },
-            { type: "formula", name: "放物線 (x²)", code: "(x*x)/200" }, { type: "formula", name: "Tangent (tan)", code: "TAN" },
-            { type: "modifier", name: "反転 (d/dx)", code: "INVERT" }, { type: "modifier", name: "積分 (∫)", code: "INT" },
-            { type: "modifier", name: "極限 (lim)", code: "LIM" }, { type: "modifier", name: "虚数 (i)", code: "IMG" }, { type: "modifier", name: "総和 (Σ)", code: "SIGMA" },
-            { type: "stat", name: "威力増加", action: () => gameState.p.dmg += 0.2 }, { type: "stat", name: "描画速度UP", action: () => gameState.p.spd = Math.max(3, gameState.p.spd - 2) }, { type: "stat", name: "太さUP", action: () => gameState.p.lw += 2 }
-        ];
-        const upIneq = [
-            { type: "variable", name: "最寄りの敵 (CLO)", code: "CLO" }, { type: "variable", name: "ポインタ (PTR)", code: "PTR" }, { type: "target_mod", name: "射出 (Launch)", code: "LAUNCH" },
-            { type: "base", name: "下部領域", code: "BASE_LESS" }, { type: "base", name: "円形領域", code: "BASE_CIRCLE" },
-            { type: "formula", name: "Sine 波面", code: "SIN_AREA" }, { type: "formula", name: "Noise 浸食", code: "NOISE_AREA" }, { type: "formula", name: "Step 階段", code: "STEP_AREA" },
-            { type: "modifier", name: "NOT (反転)", code: "INVERT_INEQ" }, { type: "modifier", name: "帯域化 (Band)", code: "BAND_INEQ" }, { type: "modifier", name: "持続化 (Persist)", code: "PERSIST" },
-            { type: "stat", name: "威力増加", action: () => gameState.p.dmg += 0.1 }, { type: "stat", name: "展開速度UP", action: () => gameState.p.spd = Math.max(5, gameState.p.spd - 2) }, { type: "stat", name: "持続時間UP", action: () => gameState.p.dur += 15 }
+            { type: "variable", name: "最寄りの敵 (CLO)", shortName: "CLO", code: "CLO" },
+            { type: "variable", name: "ランダム (RAN)", shortName: "RAN", code: "RAN" },
+            { type: "variable", name: "敵の重心 (AVG)", shortName: "AVG", code: "AVG" },
+            { type: "variable", name: "ポインタ (PTR)", shortName: "PTR", code: "PTR" },
+            { type: "target_mod", name: "射出 (Launch)", shortName: "Launch", code: "LAUNCH" },
+            { type: "formula", name: "円 (Circle)", shortName: "Circle", code: "CIRCLE" },
+            { type: "formula", name: "バラ (Rose)", shortName: "r=cos(kθ)", code: "ROSE" },
+            { type: "formula", name: "波 (sin)", shortName: "sin(x)", code: "SIN" },
+            { type: "formula", name: "絶対値波 (|sin|)", shortName: "|sin|", code: "ABS_SIN" },
+            { type: "formula", name: "急上昇 (exp)", shortName: "exp", code: "EXP" },
+            { type: "formula", name: "鋭突進 (log)", shortName: "log", code: "LOG" },
+            { type: "formula", name: "階段状 (Sigmoid)", shortName: "Sigmoid", code: "SIGMOID" },
+            { type: "formula", name: "放物線 (x²)", shortName: "x²", code: "PARABOLA" },
+            { type: "formula", name: "Random Noise", shortName: "Noise", code: "NOISE" },
+            { type: "formula", name: "Tangent (tan)", shortName: "tan(x)", code: "TAN" },
+            { type: "modifier", name: "反転 (d/dx)", shortName: "d/dx", code: "INVERT" },
+            { type: "modifier", name: "積分 (∫)", shortName: "∫", code: "INT" },
+            { type: "modifier", name: "極限 (lim)", shortName: "lim", code: "LIM" },
+            { type: "modifier", name: "虚数 (i)", shortName: "i", code: "IMG" },
+            { type: "modifier", name: "総和 (Σ)", shortName: "Σ", code: "SIGMA" },
+            { type: "stat", name: "攻撃力UP", action: () => gameState.player.damage += 0.2 },
+            { type: "stat", name: "描画速度UP", action: () => gameState.player.attackInterval = Math.max(3, gameState.player.attackInterval - 2) },
+            { type: "stat", name: "太さUP", action: () => gameState.player.lineWidth += 2 }
         ];
 
-        function initDict(t) {
+        const upIneq = [
+            { type: "variable", name: "最寄りの敵 (CLO)", shortName: "CLO", code: "CLO" },
+            { type: "variable", name: "ポインタ (PTR)", shortName: "PTR", code: "PTR" },
+            { type: "target_mod", name: "射出 (Launch)", shortName: "Launch", code: "LAUNCH" },
+            { type: "base", name: "下部領域", shortName: "y<f(x)", code: "BASE_LESS" },
+            { type: "base", name: "円形領域", shortName: "Circle Area", code: "BASE_CIRCLE" },
+            { type: "formula", name: "Sine 波面", shortName: "sin(x)", code: "SIN_AREA" },
+            { type: "formula", name: "Noise 浸食", shortName: "Noise", code: "NOISE_AREA" },
+            { type: "formula", name: "Step 階段", shortName: "floor", code: "STEP_AREA" },
+            { type: "formula", name: "Tangent Wave", shortName: "tan(x)", code: "TAN_AREA" },
+            { type: "modifier", name: "NOT (反転)", shortName: "NOT", code: "INVERT_INEQ" },
+            { type: "modifier", name: "帯域化 (Band)", shortName: "Band", code: "BAND_INEQ" },
+            { type: "modifier", name: "持続化 (Persist)", shortName: "Persist", code: "PERSIST" },
+            { type: "stat", name: "攻撃力UP", action: () => gameState.player.damage += 0.1 },
+            { type: "stat", name: "展開速度UP", action: () => gameState.player.attackInterval = Math.max(5, gameState.player.attackInterval - 2) },
+            { type: "stat", name: "持続時間UP", action: () => gameState.player.durationBonus += 15 }
+        ];
+
+        function initEncyclopedia(t) {
             const l = document.getElementById('dict-list'); l.innerHTML = '';
             (t === 'eq' ? upEq : upIneq).forEach(u => { if(u.type!=='stat') l.innerHTML += `<div class="list-item"><div><span class="type-badge ${u.type}">${u.type}</span><b>${u.name}</b></div></div>`; });
         }
 
         const pUpgs = [{id:'hp',n:'HP(+5)',b:10},{id:'atk',n:'ATK(+0.1)',b:15},{id:'spd',n:'SPD(-1F)',b:20},{id:'reroll',n:'REROLL',b:20}];
-        function updateUI() {
-            document.getElementById('g-xp-val').innerText = gData.xp;
+        function updateUpgradeUI() {
+            document.getElementById('global-xp-val').innerText = gData.xp;
             const l = document.getElementById('upgrade-list'); l.innerHTML = '';
             pUpgs.forEach(i => {
-                const lv = gData.upg[i.id] || 0, c = i.b * (lv + 1);
+                const lv = gData.upgrades[i.id] || 0, c = i.b * (lv + 1);
                 l.innerHTML += `<div class="list-item"><div><b>${i.n}</b> (Lv.${lv})</div><button class="btn" style="width:auto;padding:6px 12px;margin:0;" ${gData.xp>=c?'':'disabled'} onclick="buyUp('${i.id}',${c})">${c}XP</button></div>`;
             });
         }
-        function buyUp(id, c) { gData.xp -= c; gData.upg[id] = (gData.upg[id]||0)+1; saveData(); updateUI(); }
+        function buyUp(id, c) { gData.xp -= c; gData.upgrades[id] = (gData.upgrades[id]||0)+1; saveData(); updateUpgradeUI(); }
 
         let gameState = {};
 
         function startGame(type) {
             loadData(); showScreen('game-screen');
-            const u = gData.upg;
+            const u = gData.upgrades;
             gameState = {
-                type, frame: 0, pause: false, over: false, rrl: 3 + (u.reroll||0), curse: gData.curse||0,
-                p: { hp: 35+(u.hp||0)*5, maxHp: 35+(u.hp||0)*5, x: 400, y: 300, lv: 1, xp: 0, nx: 5, dmg: 1.0+(u.atk||0)*0.1, spd: Math.max(3, 12-(u.spd||0)), lw: 3, inv: 0, dur: 0 },
-                ens: [], efs: [], ineqs: [], bEfs: [],
-                forms: [{ id:1, n: type==='eq'?"スロット1":"領域1", c: type==='eq'?[{name:"Circle",code:"CIRCLE"}]:[], v: [] }]
+                charType: type, frameCount: 0, isPaused: false, isGameOver: false, rerollsLeft: 3 + (u.reroll||0), curseLevel: gData.curse||0,
+                player: { hp: 35+(u.hp||0)*5, maxHp: 35+(u.hp||0)*5, x: 400, y: 300, lv: 1, xp: 0, nextXp: 5, damage: 1.0+(u.atk||0)*0.1, attackInterval: Math.max(3, 12-(u.spd||0)), lineWidth: 3, invincible: 0, durationBonus: 0 },
+                enemies: [], effects: [], ineqEffects: [], enemyEffects: [],
+                formulas: [{ id:1, name: type==='eq'?"スロット1":"領域1", components: type==='eq'?[{name:"Circle",shortName:"Circle",code:"CIRCLE"}]:[], variables: [] }]
             };
-            document.getElementById('curse-val').innerText = gameState.curse;
+            document.getElementById('curse-val').innerText = gameState.curseLevel;
             lastFrameTime = performance.now();
             animationId = requestAnimationFrame(gameLoop);
         }
+
+        function returnToTitle() { cancelAnimationFrame(animationId); showScreen('title-screen'); }
 
         class Enemy {
             constructor(idx) {
                 const a = Math.random()*Math.PI*2;
                 this.x = 400 + Math.cos(a)*550; this.y = 300 + Math.sin(a)*550;
-                this.dead = false; this.isBoss = false; this.hitF = 0; this.cd = {}; this.n = idx+3; this.fragile = 0;
-                this.maxHp = Math.floor((1+idx*2)*(1+gameState.curse*0.01)); this.hp = this.maxHp;
-                this.spd = 1.0 + idx*0.1 + gameState.p.lv*0.05; this.sz = 12 + idx*1.5; this.xp = 1 + idx;
-                this.col = `hsl(0, ${Math.min(80, 40+idx*5)}%, ${Math.max(30, 70-idx*5)}%)`;
+                this.isBoss = false; this.hitFlash = 0; this.ineqCooldown = {}; this.n = idx+3; this.fragile = 0;
+                this.maxHp = Math.floor((1+idx*2)*(1+gameState.curseLevel*0.01)); this.hp = this.maxHp;
+                this.speed = 1.0 + idx*0.1 + gameState.player.lv*0.05; this.size = 12 + idx*1.5; this.xp = 1 + idx;
+                this.color = `hsl(0, ${Math.min(80, 40+idx*5)}%, ${Math.max(30, 70-idx*5)}%)`;
             }
             update() {
-                const d = Math.hypot(gameState.p.x-this.x, gameState.p.y-this.y);
-                if(d>1){ this.x+=(gameState.p.x-this.x)/d*this.spd; this.y+=(gameState.p.y-this.y)/d*this.spd; }
-                for(let k in this.cd) if(this.cd[k]>0) this.cd[k]--;
+                const d = Math.hypot(gameState.player.x-this.x, gameState.player.y-this.y);
+                if(d>1){ this.x+=(gameState.player.x-this.x)/d*this.speed; this.y+=(gameState.player.y-this.y)/d*this.speed; }
+                for(let k in this.ineqCooldown) if(this.ineqCooldown[k]>0) this.ineqCooldown[k]--;
             }
             draw() {
-                ctx.fillStyle = this.hitF>0 ? "#fff" : this.col; ctx.beginPath();
-                for(let i=0; i<this.n; i++){ let a=-Math.PI/2+(Math.PI*2*i)/this.n; ctx.lineTo(this.x+Math.cos(a)*this.sz, this.y+Math.sin(a)*this.sz); }
+                ctx.fillStyle = this.hitFlash>0 ? "#fff" : this.color; ctx.beginPath();
+                for(let i=0; i<this.n; i++){ let a=-Math.PI/2+(Math.PI*2*i)/this.n; ctx.lineTo(this.x+Math.cos(a)*this.size, this.y+Math.sin(a)*this.size); }
                 ctx.closePath(); ctx.fill(); ctx.strokeStyle="#844"; ctx.lineWidth=2; ctx.stroke();
-                if(this.fragile>0){ ctx.save(); ctx.strokeStyle="rgba(180,100,200,0.8)"; ctx.beginPath(); ctx.arc(this.x,this.y,this.sz+4,0,Math.PI*2); ctx.stroke(); ctx.restore(); this.fragile--; }
-                if(this.maxHp>1){ ctx.fillStyle="#844"; ctx.fillRect(this.x-12,this.y-this.sz-10,24,4); ctx.fillStyle="#f33"; ctx.fillRect(this.x-12,this.y-this.sz-10,24*(this.hp/this.maxHp),4); }
-                if(this.hitF>0) this.hitF--;
+                if(this.fragile>0){ ctx.save(); ctx.strokeStyle="rgba(180,100,200,0.8)"; ctx.beginPath(); ctx.arc(this.x,this.y,this.size+4,0,Math.PI*2); ctx.stroke(); ctx.restore(); this.fragile--; }
+                if(this.maxHp>1){ ctx.fillStyle="#844"; ctx.fillRect(this.x-12,this.y-this.size-10,24,4); ctx.fillStyle="#f33"; ctx.fillRect(this.x-12,this.y-this.size-10,24*(this.hp/this.maxHp),4); }
+                if(this.hitFlash>0) this.hitFlash--;
             }
         }
 
         class Boss extends Enemy {
             constructor(type, lv) {
-                super(0); this.isBoss=true; this.bType=type; this.n=type==='mid'?8:12; this.sz=type==='mid'?35:50;
-                this.maxHp = Math.floor((type==='mid'?1000:2500)*(1+gameState.curse*0.01) + lv*15); this.hp=this.maxHp;
-                this.state = 'MOVE'; this.tmr = 0; this.xp = type==='mid'?300:0;
+                super(0); this.isBoss=true; this.bossType=type; this.n=type==='mid'?8:12; this.size=type==='mid'?35:50;
+                this.maxHp = Math.floor((type==='mid'?1000:2500)*(1+gameState.curseLevel*0.01) + lv*15); this.hp=this.maxHp;
+                this.state = 'MOVE'; this.timer = 0; this.xp = type==='mid'?300:0;
             }
             update() {
                 super.update();
-                if(this.state==='MOVE') { if(Math.hypot(this.x-gameState.p.x, this.y-gameState.p.y)<150) { this.state='ATK'; this.tmr=30; } } 
+                if(this.state==='MOVE') { if(Math.hypot(this.x-gameState.player.x, this.y-gameState.player.y)<150) { this.state='ATK'; this.timer=30; } } 
                 else {
-                    if(--this.tmr<=0) {
-                        const pts=[]; for(let t=-400;t<=400;t+=4){ let a=(t+400)*(Math.PI*2/800), r=this.bType==='mid'?Math.cos(4*a)*150:150; pts.push({x:this.x+r*Math.cos(a), y:this.y+r*Math.sin(a)+Math.sin(t/20)*30}); }
-                        gameState.bEfs.push({pts, life:30, dead:false});
+                    if(--this.timer<=0) {
+                        const pts=[]; for(let t=-400;t<=400;t+=4){ let a=(t+400)*(Math.PI*2/800), r=this.bossType==='mid'?Math.cos(4*a)*150:150; pts.push({x:this.x+r*Math.cos(a), y:this.y+r*Math.sin(a)+Math.sin(t/20)*30}); }
+                        gameState.enemyEffects.push({points:pts, life:30, lineWidth:4, hasHit:false});
                         this.x = Math.random()*800; this.y = Math.random()*600; this.state='MOVE';
                     }
                 }
             }
-            draw() { if(this.state==='ATK'){ctx.beginPath();ctx.arc(this.x,this.y,this.sz*1.5,0,Math.PI*2);ctx.fillStyle="rgba(255,100,100,0.3)";ctx.fill();} super.draw(); }
+            draw() { if(this.state==='ATK'){ctx.beginPath();ctx.arc(this.x,this.y,this.size*1.5,0,Math.PI*2);ctx.fillStyle="rgba(255,100,100,0.3)";ctx.fill();} super.draw(); }
         }
 
         function getTarget(c) {
-            let trgs = gameState.ens.filter(e=>!e.dead);
-            if(!trgs.length) return null;
-            if(c==='CLO') return trgs.reduce((p,c)=>Math.hypot(p.x-gameState.p.x,p.y-gameState.p.y)<Math.hypot(c.x-gameState.p.x,c.y-gameState.p.y)?p:c);
-            if(c==='RAN') return trgs[Math.floor(Math.random()*trgs.length)];
-            if(c==='AVG') { let sx=0,sy=0; trgs.forEach(e=>{sx+=e.x;sy+=e.y;}); return {x:sx/trgs.length, y:sy/trgs.length}; }
+            if(!gameState.enemies.length) return null;
+            if(c==='CLO') return gameState.enemies.reduce((p,c)=>Math.hypot(p.x-gameState.player.x,p.y-gameState.player.y)<Math.hypot(c.x-gameState.player.x,c.y-gameState.player.y)?p:c);
+            if(c==='RAN') return gameState.enemies[Math.floor(Math.random()*gameState.enemies.length)];
+            if(c==='AVG') { let sx=0,sy=0; gameState.enemies.forEach(e=>{sx+=e.x;sy+=e.y;}); return {x:sx/gameState.enemies.length, y:sy/gameState.enemies.length}; }
             return null;
         }
 
         function gameLoop(ts) {
-            if(gameState.over) return; animationId = requestAnimationFrame(gameLoop);
-            if(gameState.pause || ts-lastFrameTime<15) return; lastFrameTime = ts;
-            ctx.clearRect(0,0,800,600); gameState.frame++;
+            if(gameState.isGameOver) return; animationId = requestAnimationFrame(gameLoop);
+            if(gameState.isPaused || ts-lastFrameTime<15) return; lastFrameTime = ts;
+            ctx.clearRect(0,0,800,600); gameState.frameCount++;
             
-            let rate = Math.max(2, Math.floor(Math.max(10, 60-gameState.p.lv*1.5)/(1+gameState.curse*0.01)));
-            if(gameState.frame % rate === 0) gameState.ens.push(new Enemy(Math.min(5, Math.floor(gameState.frame/3600))));
-            if(gameState.frame === 18000) gameState.ens.push(new Boss('mid', gameState.p.lv));
-            if(gameState.frame === 36000) gameState.ens.push(new Boss('last', gameState.p.lv));
+            let rate = Math.max(2, Math.floor(Math.max(10, 60-gameState.player.lv*1.5)/(1+gameState.curseLevel*0.01)));
+            if(gameState.frameCount % rate === 0) gameState.enemies.push(new Enemy(Math.min(5, Math.floor(gameState.frameCount/3600))));
+            if(gameState.frameCount === 18000) gameState.enemies.push(new Boss('mid', gameState.player.lv));
+            if(gameState.frameCount === 36000) gameState.enemies.push(new Boss('last', gameState.player.lv));
 
             processAttacks();
 
-            gameState.ens.forEach(e => { e.update(); e.draw(); });
-
-            handleIneqs(); handleEqs(); handleBossEfs();
-
-            gameState.ens.forEach(e => {
-                if(!e.dead && Math.hypot(e.x-gameState.p.x, e.y-gameState.p.y) < e.sz+12) {
-                    if(gameState.p.inv<=0) { gameState.p.hp--; gameState.p.inv=45; }
-                    if(!e.isBoss) e.dead = true;
+            // 敵描画と移動
+            for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                let e = gameState.enemies[i];
+                e.update(); e.draw();
+                if(Math.hypot(e.x-gameState.player.x, e.y-gameState.player.y) < e.size+12) {
+                    if(gameState.player.invincible<=0) { gameState.player.hp--; gameState.player.invincible=45; }
+                    if(!e.isBoss) gameState.enemies.splice(i,1);
                 }
-            });
+            }
 
-            gameState.ens = gameState.ens.filter(e => !e.dead);
-            gameState.efs = gameState.efs.filter(e => !e.dead);
-            gameState.ineqs = gameState.ineqs.filter(e => !e.dead);
-            gameState.bEfs = gameState.bEfs.filter(e => !e.dead);
+            // ボス攻撃
+            for (let i = gameState.enemyEffects.length - 1; i >= 0; i--) {
+                let eff = gameState.enemyEffects[i];
+                ctx.strokeStyle=`rgba(200,50,50,${eff.life/30})`; ctx.lineWidth=eff.lineWidth; ctx.beginPath();
+                eff.points.forEach((p,j)=>j===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
+                if(!eff.hasHit && eff.points.some(p=>Math.hypot(p.x-gameState.player.x, p.y-gameState.player.y)<15)) { gameState.player.hp-=5; eff.hasHit=true; }
+                if(--eff.life<=0) gameState.enemyEffects.splice(i,1);
+            }
 
-            if(gameState.p.inv>0) gameState.p.inv--;
+            if(gameState.charType === 'eq') handleEqs(); else handleIneqs();
+
+            if(gameState.player.invincible>0) gameState.player.invincible--;
             updateHUD();
             
-            if(gameState.p.inv%10<5){ ctx.fillStyle="#333"; ctx.beginPath(); ctx.arc(gameState.p.x, gameState.p.y, 13, 0, Math.PI*2); ctx.fill(); }
-            if(gameState.p.hp<=0) endGame(false);
+            // 自機描画
+            if(gameState.player.invincible%10<5){ ctx.fillStyle="#333"; ctx.beginPath(); ctx.arc(gameState.player.x, gameState.player.y, 13, 0, Math.PI*2); ctx.fill(); }
+            if(gameState.player.hp<=0) endGame(false);
         }
 
         function processAttacks() {
-            const T = gameState.frame, p = gameState.p;
-            gameState.forms.forEach(f => {
-                let iC = f.c.filter(c=>c.code==='INT').length;
-                if(T % (p.spd + (gameState.type==='eq'?iC*15:0)) !== 0) return;
+            const T = gameState.frameCount, p = gameState.player;
+            let ranEnt = getTarget('RAN');
+            let rX = ranEnt ? ranEnt.x - p.x : 0;
+
+            gameState.formulas.forEach(f => {
+                let iC = f.components.filter(c=>c.code==='INT').length;
+                if(T % (p.attackInterval + (gameState.charType==='eq'?iC*15:0)) !== 0) return;
                 
-                let t=null; if(f.v.length) { t = f.v[0].code==='PTR' ? pointerCoords : getTarget(f.v[0].code); }
-                let st={x:p.x, y:p.y}, ed=t?{x:t.x,y:t.y}:st, hV=f.c.some(c=>c.code==='LAUNCH');
+                let t=null; if(f.variables.length) { t = f.variables[0].code==='PTR' ? pointerCoords : getTarget(f.variables[0].code); }
+                let st={x:p.x, y:p.y}, ed=t?{x:t.x,y:t.y}:st, hV=f.components.some(c=>c.code==='LAUNCH');
                 if(!hV) st=ed;
 
-                if(gameState.type==='eq') {
-                    let pts=[], isC=f.c.some(c=>c.code==='CIRCLE'), rC=f.c.filter(c=>c.code==='ROSE').length;
-                    let hasLim = f.c.some(c=>c.code==='LIM');
-                    let tRange = 400 + (hasLim?400:0);
-
-                    let cFns = [];
-                    for(let c of f.c) {
-                        if(['CIRCLE','ROSE','INVERT','TAN','INT','LIM','IMG','SIGMA','LAUNCH'].includes(c.code)) continue;
-                        try { cFns.push(new Function('x','T','return '+c.code)); } catch(e){}
-                    }
-
-                    for(let x=-tRange; x<=tRange; x+=5){
+                if(gameState.charType==='eq') {
+                    let pts=[], isC=f.components.some(c=>c.code==='CIRCLE'), rC=f.components.filter(c=>c.code==='ROSE').length;
+                    let hasLim=f.components.some(c=>c.code==='LIM'), tR = 400 + (hasLim?400:0);
+                    
+                    for(let x=-tR; x<=tR; x+=5){
                         let lx=x, ly=0;
-                        if(rC>0){ let a=(x+tRange)*(Math.PI*2/800), r=Math.cos((2+rC*2)*a)*100; lx=r*Math.cos(a); ly=r*Math.sin(a); }
-                        else if(isC){ let a=(x+tRange)*(Math.PI*2/800); lx=Math.cos(a)*80; ly=Math.sin(a)*80; }
+                        if(rC>0){ let a=(x+tR)*(Math.PI*2/800), r=Math.cos((2+rC*2)*a)*100; lx=r*Math.cos(a); ly=r*Math.sin(a); }
+                        else if(isC){ let a=(x+tR)*(Math.PI*2/800); lx=Math.cos(a)*80; ly=Math.sin(a)*80; }
                         
-                        for(let fn of cFns) { try { ly += fn(lx, T); } catch(e){} }
-                        if(f.c.some(c=>c.code==='TAN')){ let tv=Math.tan(x/20)*40; lx+=Math.max(-800,Math.min(800,tv)); }
-                        if(f.c.filter(c=>c.code==='INVERT').length%2) ly=-ly;
+                        // 軽量な評価関数呼び出し
+                        for(let c of f.components) ly += getEqY(c.code, lx, T, rX);
+                        
+                        if(f.components.some(c=>c.code==='TAN')){ let tv=Math.tan(x/20)*40; lx+=Math.max(-800,Math.min(800,tv)); }
+                        if(f.components.filter(c=>c.code==='INVERT').length%2!==0) ly=-ly;
                         pts.push({lx, ly:-ly});
                     }
                     
-                    let sigC = f.c.filter(c=>c.code==='SIGMA').length, imgC = f.c.some(c=>c.code==='IMG');
+                    let sigC = f.components.filter(c=>c.code==='SIGMA').length, imgC = f.components.some(c=>c.code==='IMG');
                     let sets = [{p:pts, isS:false}];
-                    for(let s=1; s<=sigC; s++) {
-                        sets.push({p:pts.map(pt=>({lx:pt.lx, ly:pt.ly-30*s})), isS:false});
-                        sets.push({p:pts.map(pt=>({lx:pt.lx, ly:pt.ly+30*s})), isS:false});
-                    }
-                    if(imgC) {
-                        let shSets = sets.map(s => ({p:s.p.map(pt=>({lx:pt.lx+20, ly:pt.ly+20})), isS:true}));
-                        sets = sets.concat(shSets);
-                    }
+                    for(let s=1; s<=sigC; s++) { sets.push({p:pts.map(pt=>({lx:pt.lx, ly:pt.ly-30*s})), isS:false}, {p:pts.map(pt=>({lx:pt.lx, ly:pt.ly+30*s})), isS:false}); }
+                    if(imgC) { let shSets = sets.map(s => ({p:s.p.map(pt=>({lx:pt.lx+20, ly:pt.ly+20})), isS:true})); sets = sets.concat(shSets); }
 
-                    let mLife=12+iC*4, dmg=p.dmg*(1+iC*0.5), lw=p.lw+iC*5;
-                    sets.forEach(set => {
-                        gameState.efs.push({pts:set.p, life:mLife, max:mLife, lw, st, ed, hV, hasLim, dmg, hit:new Set(), isS:set.isS, dead:false});
-                    });
+                    let mLife=12+iC*4, dmg=p.damage*(1+iC*0.5), lw=p.lineWidth+iC*5;
+                    sets.forEach(set => gameState.effects.push({pts:set.p, life:mLife, max:mLife, lw, st, ed, hV, hasLim, dmg, hit:new Set(), isS:set.isS}));
                 } else {
-                    let pts=[], bs=f.c.some(c=>c.code==='BASE_CIRCLE')?'CIRCLE':'GREATER';
+                    let pts=[], bs=f.components.some(c=>c.code==='BASE_CIRCLE')?'CIRCLE':'GREATER';
                     if(bs==='CIRCLE'){
                         for(let t=0; t<=Math.PI*2+0.1; t+=0.1){
-                            let y=0; for(let c of f.c){ if(c.code==='SIN_AREA')y+=Math.sin(t*10+T/10)*30; }
+                            let y=0; for(let c of f.components) y += getIneqY(c.code, t*200, T);
                             pts.push({lx: (150+y)*Math.cos(t), ly: -(150+y)*Math.sin(t)});
                         }
                     } else {
                         for(let x=-400; x<=400; x+=10){
-                            let y=0; for(let c of f.c){
-                                if(c.code==='SIN_AREA')y+=Math.sin(x/20+T/10)*30;
-                                else if(c.code==='STEP_AREA')y+=Math.floor((x+T*2)/60)*30;
-                                else if(c.code==='NOISE_AREA'){let n=Math.sin(x*12+T*.1)*43758; y+=(n%1)*50;}
-                            }
+                            let y=0; for(let c of f.components) y += getIneqY(c.code, x, T);
                             pts.push({lx: x, ly: -Math.max(-1000,Math.min(1000,y))});
                         }
                     }
-                    let mLife=10+f.c.filter(c=>c.code==='PERSIST').length*45+p.dur;
-                    gameState.ineqs.push({id:Math.random(), pts, bs, st, ed, hV, life:mLife, max:mLife, dmg:p.dmg*0.4, isB:f.c.some(c=>c.code==='BAND_INEQ'), inv:f.c.filter(c=>c.code==='INVERT_INEQ').length%2!==0, dead:false});
+                    let mLife=10+f.components.filter(c=>c.code==='PERSIST').length*45+p.durationBonus;
+                    gameState.ineqEffects.push({id:Math.random(), pts, bs, st, ed, hV, life:mLife, max:mLife, dmg:p.damage*0.4, isB:f.components.some(c=>c.code==='BAND_INEQ'), inv:f.components.filter(c=>c.code==='INVERT_INEQ').length%2!==0});
                 }
             });
         }
 
-        function dealDamage(e, d) {
-            e.hp -= d; e.hitF = 3;
-            if(e.hp <= 0 && !e.dead) {
-                e.dead = true; gameState.p.xp += e.xp;
-                if(gameState.p.xp >= gameState.p.nx) levelUp();
-                if(e.isBoss && e.bType==='last') endGame(true);
+        // --- 直接描画＆当たり判定による超・軽量化（スマホの点滅対策） ---
+        function handleEqs() {
+            for (let i = gameState.effects.length - 1; i >= 0; i--) {
+                let eff = gameState.effects[i], prg = eff.hV ? 1-(eff.life/eff.max) : 1;
+                let cx = eff.st.x+(eff.ed.x-eff.st.x)*prg, cy = eff.st.y+(eff.ed.y-eff.st.y)*prg;
+                
+                ctx.save();
+                if(eff.isS) { ctx.setLineDash([5,10]); ctx.strokeStyle=`rgba(180,100,200,${eff.life/eff.max})`; }
+                else ctx.strokeStyle=`rgba(60,60,60,${eff.life/eff.max})`;
+                ctx.lineWidth=eff.lw; ctx.beginPath();
+                
+                let prevX, prevY;
+                for(let j=0; j<eff.pts.length; j++){
+                    let wx = eff.pts[j].lx + cx, wy = eff.pts[j].ly + cy;
+                    if(eff.hasLim){ wx=((wx%800)+800)%800; wy=((wy%600)+600)%600; }
+                    if(j===0) ctx.moveTo(wx,wy); else { if(eff.hasLim && Math.hypot(wx-prevX, wy-prevY)>200) ctx.moveTo(wx,wy); else ctx.lineTo(wx,wy); }
+                    prevX = wx; prevY = wy;
+                }
+                ctx.stroke(); ctx.restore();
+
+                if(eff.hV || eff.life===eff.max) {
+                    for(let k=gameState.enemies.length-1; k>=0; k--) {
+                        let e = gameState.enemies[k]; if(eff.hit.has(e)) continue;
+                        let hit = false;
+                        for(let j=0; j<eff.pts.length; j++){
+                            let wx = eff.pts[j].lx + cx, wy = eff.pts[j].ly + cy;
+                            if(eff.hasLim){ wx=((wx%800)+800)%800; wy=((wy%600)+600)%600; }
+                            if(Math.hypot(e.x-wx, e.y-wy) < e.size + eff.lw + 2) { hit=true; break; }
+                        }
+                        if(hit) {
+                            eff.hit.add(e);
+                            if(eff.isS) e.fragile = 120;
+                            else {
+                                let d = eff.dmg; if(e.fragile>0){ d*=2; e.fragile=0; }
+                                e.hp -= d; e.hitFlash = 5;
+                                if(e.hp <= 0) { gameState.enemies.splice(k,1); if(e.isBoss && e.bossType==='last') triggerGameClear(); else gainXp(e.xp); }
+                            }
+                        }
+                    }
+                }
+                if(--eff.life<=0) gameState.effects.splice(i,1);
             }
         }
 
-        function handleEqs() {
-            gameState.efs.forEach(ef => {
-                let prg = ef.hV ? 1-(ef.life/ef.max) : 1, cx=ef.st.x+(ef.ed.x-ef.st.x)*prg, cy=ef.st.y+(ef.ed.y-ef.st.y)*prg;
-                let wP = ef.pts.map(p => {
-                    let wx=p.lx+cx, wy=p.ly+cy;
-                    if(ef.hasLim){ wx=((wx%800)+800)%800; wy=((wy%600)+600)%600; }
-                    return {x:wx, y:wy};
-                });
-                
-                ctx.save();
-                if(ef.isS) { ctx.setLineDash([5,10]); ctx.strokeStyle=`rgba(180,100,200,${ef.life/ef.max})`; }
-                else { ctx.strokeStyle=`rgba(60,60,60,${ef.life/ef.max})`; }
-                ctx.lineWidth=ef.lw; ctx.beginPath();
-                wP.forEach((p,j)=>{
-                    if(j===0) ctx.moveTo(p.x,p.y);
-                    else { if(ef.hasLim && Math.hypot(p.x-wP[j-1].x, p.y-wP[j-1].y)>200) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); }
-                });
-                ctx.stroke(); ctx.restore();
-
-                if(ef.hV || ef.life===ef.max) {
-                    gameState.ens.forEach(e => {
-                        if(!e.dead && !ef.hit.has(e) && wP.some(p=>Math.hypot(e.x-p.x,e.y-p.y)<e.sz+ef.lw)){ 
-                            ef.hit.add(e); 
-                            if(ef.isS) e.fragile = 120;
-                            else { let d=ef.dmg; if(e.fragile>0){d*=2; e.fragile=0;} dealDamage(e, d); }
-                        }
-                    });
-                }
-                if(--ef.life<=0) ef.dead=true;
-            });
-        }
-
         function handleIneqs() {
-            gameState.ineqs.forEach(ef => {
-                let prg = ef.hV ? 1-(ef.life/ef.max) : 1, cx=ef.st.x+(ef.ed.x-ef.st.x)*prg, cy=ef.st.y+(ef.ed.y-ef.st.y)*prg;
-                ctx.fillStyle = `rgba(100,160,220,${(ef.life/ef.max)*0.4})`; ctx.beginPath();
-                ef.pts.forEach((p,j)=>j===0?ctx.moveTo(p.lx+cx,p.ly+cy):ctx.lineTo(p.lx+cx,p.ly+cy));
-                if(ef.bs!=='CIRCLE'){ ctx.lineTo(ef.pts[ef.pts.length-1].lx+cx, 1600); ctx.lineTo(ef.pts[0].lx+cx, 1600); }
-                ctx.fill();
-
-                gameState.ens.forEach(e => {
-                    if(!e.dead && !e.cd[ef.id]) {
-                        if(Math.hypot(e.x-cx, e.y-cy) < 150) { dealDamage(e, ef.dmg); e.cd[ef.id]=10; }
+            for (let i = gameState.ineqEffects.length - 1; i >= 0; i--) {
+                let eff = gameState.ineqEffects[i], prg = eff.hV ? 1-(eff.life/eff.max) : 1;
+                let cx = eff.st.x+(eff.ed.x-eff.st.x)*prg, cy = eff.st.y+(eff.ed.y-eff.st.y)*prg;
+                
+                ctx.save(); let alpha = (eff.life/eff.max)*0.4;
+                ctx.fillStyle = `rgba(100,160,200,${alpha})`; ctx.strokeStyle = `rgba(80,140,180,${alpha*2})`; ctx.beginPath();
+                
+                if(eff.bs==='CIRCLE') {
+                    for(let j=0; j<eff.pts.length; j++) { if(j===0) ctx.moveTo(eff.pts[j].lx+cx, eff.pts[j].ly+cy); else ctx.lineTo(eff.pts[j].lx+cx, eff.pts[j].ly+cy); }
+                    ctx.closePath();
+                    if(eff.inv && !eff.isB) { ctx.rect(800,0,-800,600); ctx.fill("evenodd"); }
+                    else if(eff.isB) { ctx.lineWidth = 40+gameState.player.lineWidth*2; ctx.stroke(); } else ctx.fill();
+                } else {
+                    for(let j=0; j<eff.pts.length; j++) { if(j===0) ctx.moveTo(eff.pts[j].lx+cx, eff.pts[j].ly+cy); else ctx.lineTo(eff.pts[j].lx+cx, eff.pts[j].ly+cy); }
+                    if(eff.isB) { ctx.lineWidth = 40+gameState.player.lineWidth*2; ctx.stroke(); }
+                    else {
+                        let g = eff.bs==='GREATER'; if(eff.inv) g=!g; let ey = g ? -1000 : 1600;
+                        ctx.lineTo(eff.pts[eff.pts.length-1].lx+cx, ey); ctx.lineTo(eff.pts[0].lx+cx, ey); ctx.closePath(); ctx.fill();
                     }
-                });
-                if(--ef.life<=0) ef.dead=true;
-            });
-        }
+                }
+                ctx.restore();
 
-        function handleBossEfs() {
-            gameState.bEfs.forEach(ef => {
-                ctx.strokeStyle=`rgba(200,50,50,${ef.life/30})`; ctx.lineWidth=4; ctx.beginPath();
-                ef.pts.forEach((p,j)=>j===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
-                if(!ef.hasHit && ef.pts.some(p=>Math.hypot(p.x-gameState.p.x, p.y-gameState.p.y)<15)){ gameState.p.hp-=5; ef.hasHit=true; }
-                if(--ef.life<=0) ef.dead=true;
-            });
+                for(let k=gameState.enemies.length-1; k>=0; k--){
+                    let e = gameState.enemies[k]; if(e.ineqCooldown[eff.id]>0) continue;
+                    if(Math.hypot(e.x-cx, e.y-cy) < 150) { // 簡易判定(スマホ向け高速化)
+                        e.hp -= eff.dmg; e.hitFlash = 3; e.ineqCooldown[eff.id] = 10;
+                        if(e.hp <= 0) { gameState.enemies.splice(k,1); if(e.isBoss && e.bossType==='last') triggerGameClear(); else gainXp(e.xp); }
+                    }
+                }
+                if(--eff.life<=0) gameState.ineqEffects.splice(i,1);
+            }
         }
 
         function updateHUD() {
-            document.getElementById('hp-bar').style.width = Math.min(100, (gameState.p.hp/gameState.p.maxHp*100))+'%';
-            document.getElementById('xp-bar').style.width = Math.min(100, (gameState.p.xp/gameState.p.nx*100))+'%';
-            document.getElementById('lv-val').innerText = gameState.p.lv;
-            let s = Math.floor(gameState.frame/60); document.getElementById('time-val').innerText = `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
-            document.getElementById('stats-list').innerText = `HP:${gameState.p.hp}/${gameState.p.maxHp} | ATK:${gameState.p.dmg.toFixed(1)} | SPD:${(60/gameState.p.spd).toFixed(1)}/s`;
-            document.getElementById('formula-list').innerHTML = gameState.forms.map(f=>`[${f.n}] 📍${f.v[0]?.name||'自'} <br>└ ${f.c.map(c=>c.name).join('+')||'無'}`).join('<br>');
+            // 経験値バーが飛び出ないようにクランプ（上限100%固定）
+            document.getElementById('hp-bar').style.width = Math.max(0, Math.min(100, (gameState.player.hp/gameState.player.maxHp*100)))+'%';
+            document.getElementById('xp-bar').style.width = Math.max(0, Math.min(100, (gameState.player.xp/gameState.player.nextXp*100)))+'%';
+            document.getElementById('lv-val').innerText = gameState.player.lv;
+            let s = Math.floor(gameState.frameCount/60); document.getElementById('time-val').innerText = `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+            document.getElementById('stats-list').innerText = `HP:${gameState.player.hp}/${gameState.player.maxHp} | ATK:${gameState.player.damage.toFixed(1)} | SPD:${(60/gameState.player.attackInterval).toFixed(1)}/s`;
+            document.getElementById('formula-list').innerHTML = gameState.formulas.map(f=>`[${f.name}] 📍${f.variables[0]?.shortName||'自'} <br>└ ${f.components.map(c=>c.shortName).join('+')||'無'}`).join('<br>');
         }
 
+        function gainXp(amt) { gameState.player.xp += amt; if(gameState.player.xp >= gameState.player.nextXp) levelUp(); }
+
         function levelUp() {
-            gameState.pause = true; 
-            if(gameState.p.lv%10===0) gameState.forms.push({id:gameState.forms.length+1, n:gameState.type==='eq'?"スロット"+(gameState.forms.length+1):"領域"+(gameState.forms.length+1), c:[], v:[]});
-            rollOptions();
+            gameState.player.lv++; gameState.player.xp -= gameState.player.nextXp; gameState.player.nextXp = Math.floor(gameState.player.nextXp*1.5);
+            gameState.isPaused = true; 
+            if(gameState.player.lv%10===0) gameState.formulas.push({id:gameState.formulas.length+1, name:gameState.charType==='eq'?"スロット"+(gameState.formulas.length+1):"領域"+(gameState.formulas.length+1), components:[], variables:[]});
             
-            const m = document.getElementById('level-up-modal');
+            // 削除ボタンの表示制御
             const d = document.getElementById('remove-btn');
-            if(gameState.forms.some(f => f.c.length>0 || f.v.length>0)) {
-                d.style.display = 'block'; d.onclick = showRemoveSelect;
-            } else { d.style.display = 'none'; }
-            m.style.display='block';
+            if(gameState.formulas.some(f => f.components.length>0 || f.variables.length>0)) { d.style.display = 'block'; d.onclick = showRemoveSelect; } else { d.style.display = 'none'; }
+            
+            document.getElementById('level-up-modal').style.display='block';
+            rollOptions();
         }
 
         function rollOptions() {
             const o = document.getElementById('options'); o.innerHTML = '';
-            const p = gameState.type==='eq'?upEq:upIneq;
+            const p = gameState.charType==='eq'?upEq:upIneq;
             p.sort(()=>0.5-Math.random()).slice(0,3).forEach(c => {
-                const b = document.createElement('button'); b.className='option-btn';
-                b.innerHTML = `<b>${c.name}</b><br><small>${c.desc||''}</small>`;
+                const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<b>${c.name}</b><br><small>${c.desc||''}</small>`;
                 b.onclick = () => {
-                    if(c.type==='stat') c.action();
-                    else if(gameState.forms.length>1) { showSlotSelect(c); return; }
-                    else { if(c.type==='variable') gameState.forms[0].v=[c]; else gameState.forms[0].c.push(c); }
+                    if(c.type==='stat') c.action(); else if(gameState.formulas.length>1) { showSlotSelect(c); return; }
+                    else { if(c.type==='variable') gameState.formulas[0].variables=[c]; else gameState.formulas[0].components.push(c); }
                     closeModal();
-                };
-                o.appendChild(b);
+                }; o.appendChild(b);
             });
-            const r = document.getElementById('reroll-btn'); r.style.display='block'; r.innerText=`リロール (残${gameState.rrl})`;
-            r.onclick = () => { if(gameState.rrl>0){ gameState.rrl--; rollOptions(); } };
+            const r = document.getElementById('reroll-btn'); r.style.display='block'; r.innerText=`リロール (残${gameState.rerollsLeft})`;
+            r.onclick = () => { if(gameState.rerollsLeft>0){ gameState.rerollsLeft--; rollOptions(); } };
         }
 
         function showSlotSelect(i) {
             const o = document.getElementById('options'); o.innerHTML = '<div style="margin-bottom:10px;font-weight:bold;">追加先を選択:</div>';
-            gameState.forms.forEach(f => {
-                const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<b>${f.n}</b> (現在: ${f.c.length}要素)`;
-                b.onclick = () => { if(i.type==='variable') f.v=[i]; else f.c.push(i); closeModal(); }; o.appendChild(b);
+            gameState.formulas.forEach(f => {
+                const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<b>${f.name}</b> (現在: ${f.components.length}要素)`;
+                b.onclick = () => { if(i.type==='variable') f.variables=[i]; else f.components.push(i); closeModal(); }; o.appendChild(b);
             });
             document.getElementById('reroll-btn').style.display='none'; document.getElementById('remove-btn').style.display='none';
         }
@@ -509,14 +549,14 @@
         function showRemoveSelect() {
             const o = document.getElementById('options'); o.innerHTML = '<div style="margin-bottom:10px;font-weight:bold;">削除する要素を選択:</div>';
             document.getElementById('reroll-btn').style.display='none'; document.getElementById('remove-btn').style.display='none';
-            gameState.forms.forEach(f => {
-                f.v.forEach((v, idx) => {
+            gameState.formulas.forEach(f => {
+                f.variables.forEach((v, idx) => {
                     const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<span class="type-badge target">TARGET</span> <b>${v.name}</b>`;
-                    b.onclick = () => { f.v.splice(idx,1); closeModal(); }; o.appendChild(b);
+                    b.onclick = () => { f.variables.splice(idx,1); closeModal(); }; o.appendChild(b);
                 });
-                f.c.forEach((c, idx) => {
-                    const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<span class="type-badge formula">FORMULA</span> <b>${c.name}</b>`;
-                    b.onclick = () => { f.c.splice(idx,1); closeModal(); }; o.appendChild(b);
+                f.components.forEach((c, idx) => {
+                    const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<span class="type-badge">FORMULA</span> <b>${c.name}</b>`;
+                    b.onclick = () => { f.components.splice(idx,1); closeModal(); }; o.appendChild(b);
                 });
             });
             const cb = document.createElement('button'); cb.className='option-btn'; cb.innerText='キャンセル'; cb.style.background='#ddd';
@@ -524,15 +564,16 @@
             o.appendChild(cb);
         }
 
-        function closeModal() { document.getElementById('level-up-modal').style.display='none'; gameState.pause=false; lastFrameTime=performance.now(); }
+        function closeModal() { document.getElementById('level-up-modal').style.display='none'; gameState.isPaused=false; lastFrameTime=performance.now(); }
 
+        function triggerGameClear() { endGame(true); }
         function endGame(w) {
-            gameState.over = true; document.getElementById('game-over-modal').style.display='block';
-            const s = Math.floor(gameState.frame/60), x = Math.floor((s + gameState.p.lv*5)*(w?2:1)*(1+gameState.curse*0.01));
-            gData.xp += x; saveData(); updateUI();
+            gameState.isGameOver = true; document.getElementById('game-over-modal').style.display='block';
+            const s = Math.floor(gameState.frameCount/60), x = Math.floor((s + gameState.player.lv*5)*(w?2:1)*(1+gameState.curseLevel*0.01));
+            gData.xp += x; saveData(); updateUpgradeUI();
             document.getElementById('go-title').innerText = w ? "GAME CLEAR!" : "GAME OVER";
             document.getElementById('go-title').style.color = w ? "#da6" : "#d66";
-            document.getElementById('result-stats').innerHTML = `生存: ${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}<br>到達: Lv.${gameState.p.lv}<br><br><b>獲得XP: +${x}</b>`;
+            document.getElementById('result-stats').innerHTML = `生存: ${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}<br>到達: Lv.${gameState.player.lv}<br><br><b>獲得XP: +${x}</b>`;
         }
 
         window.returnToTitle = returnToTitle;
