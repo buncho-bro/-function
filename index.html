@@ -168,7 +168,6 @@
         function changeCurse(v) { gData.curse = Math.max(0, Math.min(100, gData.curse + v)); saveData(); document.getElementById('curse-display').innerText = gData.curse; }
         changeCurse(0);
 
-        // 重いnew Functionを使わず、安全で超高速な数式評価に切り替え
         function getEqY(code, x, T, rx) {
             switch(code) {
                 case "SIN": return Math.sin(x/20)*30;
@@ -255,6 +254,10 @@
         let gameState = {};
 
         function startGame(type) {
+            // 【バグ修正】ゲーム開始時に確実にモーダルを隠す
+            document.getElementById('game-over-modal').style.display = 'none';
+            document.getElementById('level-up-modal').style.display = 'none';
+            
             loadData(); showScreen('game-screen');
             const u = gData.upgrades;
             gameState = {
@@ -268,7 +271,13 @@
             animationId = requestAnimationFrame(gameLoop);
         }
 
-        function returnToTitle() { cancelAnimationFrame(animationId); showScreen('title-screen'); }
+        function returnToTitle() { 
+            cancelAnimationFrame(animationId); 
+            // 【バグ修正】タイトルに戻る時にもモーダルを確実に隠す
+            document.getElementById('game-over-modal').style.display = 'none';
+            document.getElementById('level-up-modal').style.display = 'none';
+            showScreen('title-screen'); 
+        }
 
         class Enemy {
             constructor(idx) {
@@ -334,7 +343,6 @@
 
             processAttacks();
 
-            // 敵描画と移動
             for (let i = gameState.enemies.length - 1; i >= 0; i--) {
                 let e = gameState.enemies[i];
                 e.update(); e.draw();
@@ -344,7 +352,6 @@
                 }
             }
 
-            // ボス攻撃
             for (let i = gameState.enemyEffects.length - 1; i >= 0; i--) {
                 let eff = gameState.enemyEffects[i];
                 ctx.strokeStyle=`rgba(200,50,50,${eff.life/30})`; ctx.lineWidth=eff.lineWidth; ctx.beginPath();
@@ -358,7 +365,6 @@
             if(gameState.player.invincible>0) gameState.player.invincible--;
             updateHUD();
             
-            // 自機描画
             if(gameState.player.invincible%10<5){ ctx.fillStyle="#333"; ctx.beginPath(); ctx.arc(gameState.player.x, gameState.player.y, 13, 0, Math.PI*2); ctx.fill(); }
             if(gameState.player.hp<=0) endGame(false);
         }
@@ -385,7 +391,6 @@
                         if(rC>0){ let a=(x+tR)*(Math.PI*2/800), r=Math.cos((2+rC*2)*a)*100; lx=r*Math.cos(a); ly=r*Math.sin(a); }
                         else if(isC){ let a=(x+tR)*(Math.PI*2/800); lx=Math.cos(a)*80; ly=Math.sin(a)*80; }
                         
-                        // 軽量な評価関数呼び出し
                         for(let c of f.components) ly += getEqY(c.code, lx, T, rX);
                         
                         if(f.components.some(c=>c.code==='TAN')){ let tv=Math.tan(x/20)*40; lx+=Math.max(-800,Math.min(800,tv)); }
@@ -419,7 +424,6 @@
             });
         }
 
-        // --- 直接描画＆当たり判定による超・軽量化（スマホの点滅対策） ---
         function handleEqs() {
             for (let i = gameState.effects.length - 1; i >= 0; i--) {
                 let eff = gameState.effects[i], prg = eff.hV ? 1-(eff.life/eff.max) : 1;
@@ -488,7 +492,7 @@
 
                 for(let k=gameState.enemies.length-1; k>=0; k--){
                     let e = gameState.enemies[k]; if(e.ineqCooldown[eff.id]>0) continue;
-                    if(Math.hypot(e.x-cx, e.y-cy) < 150) { // 簡易判定(スマホ向け高速化)
+                    if(Math.hypot(e.x-cx, e.y-cy) < 150) { 
                         e.hp -= eff.dmg; e.hitFlash = 3; e.ineqCooldown[eff.id] = 10;
                         if(e.hp <= 0) { gameState.enemies.splice(k,1); if(e.isBoss && e.bossType==='last') triggerGameClear(); else gainXp(e.xp); }
                     }
@@ -498,7 +502,6 @@
         }
 
         function updateHUD() {
-            // 経験値バーが飛び出ないようにクランプ（上限100%固定）
             document.getElementById('hp-bar').style.width = Math.max(0, Math.min(100, (gameState.player.hp/gameState.player.maxHp*100)))+'%';
             document.getElementById('xp-bar').style.width = Math.max(0, Math.min(100, (gameState.player.xp/gameState.player.nextXp*100)))+'%';
             document.getElementById('lv-val').innerText = gameState.player.lv;
@@ -514,7 +517,6 @@
             gameState.isPaused = true; 
             if(gameState.player.lv%10===0) gameState.formulas.push({id:gameState.formulas.length+1, name:gameState.charType==='eq'?"スロット"+(gameState.formulas.length+1):"領域"+(gameState.formulas.length+1), components:[], variables:[]});
             
-            // 削除ボタンの表示制御
             const d = document.getElementById('remove-btn');
             if(gameState.formulas.some(f => f.components.length>0 || f.variables.length>0)) { d.style.display = 'block'; d.onclick = showRemoveSelect; } else { d.style.display = 'none'; }
             
@@ -526,7 +528,7 @@
             const o = document.getElementById('options'); o.innerHTML = '';
             const p = gameState.charType==='eq'?upEq:upIneq;
             p.sort(()=>0.5-Math.random()).slice(0,3).forEach(c => {
-                const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<b>${c.name}</b><br><small>${c.desc||''}</small>`;
+                const b = document.createElement('button'); b.className='option-btn'; b.innerHTML=`<b>${c.name}</b>`;
                 b.onclick = () => {
                     if(c.type==='stat') c.action(); else if(gameState.formulas.length>1) { showSlotSelect(c); return; }
                     else { if(c.type==='variable') gameState.formulas[0].variables=[c]; else gameState.formulas[0].components.push(c); }
